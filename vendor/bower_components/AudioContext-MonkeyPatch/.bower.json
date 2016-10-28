@@ -1,0 +1,13 @@
+{
+  "name": "AudioContext-MonkeyPatch",
+  "homepage": "https://github.com/cwilso/AudioContext-MonkeyPatch",
+  "_release": "40566e8529",
+  "_resolution": {
+    "type": "branch",
+    "branch": "gh-pages",
+    "commit": "40566e85294c1b0745796bdadbde3fb3c2b6fa63"
+  },
+  "_source": "https://github.com/cwilso/AudioContext-MonkeyPatch.git",
+  "_target": "gh-pages",
+  "_originalSource": "https://github.com/cwilso/AudioContext-MonkeyPatch.git"
+}

@@ -4,7 +4,7 @@ We wanna make the web rock. Therefor I started writing a Looper running on web t
 
 The aim is to have a looper application ready to run on all plattforms. May it be with your cell on the stage or your Mac jamming away with your friends in the studio. Loopsoup gives you an easy interface to build loops and create sounds on the fly.
 
-Plug your guitar or get your mic ready and try it: [https://loopsoup.com/try](loopsoup.com/try)
+Plug your guitar or get your mic ready and try it: [loopsoup.com/try](https://loopsoup.com/try)
 
 This is an open source initiate. Let's work together and make this work real tight.
 
@@ -20,4 +20,4 @@ node server
 ```
 
 ### Details on the file structure
-* `htdocs/js/ls.recorder` is a rework of [https://github.com/mattdiamond/Recorderjs](Matt Diamond's recorder.js) aiming to get more sample precise recording
+* `htdocs/js/ls.recorder` is a rework of [Matt Diamond's recorder.js](https://github.com/mattdiamond/Recorderjs) aiming to get more sample precise recording

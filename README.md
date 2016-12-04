@@ -20,4 +20,4 @@ node server
 ```
 
 ### Details on the file structure
-* `htdocs/js/ls.recorder` is a rework of [githubRecorderJS](Matt Diamond's recorder.js) aiming to get more sample precise recording
+* `htdocs/js/ls.recorder` is a rework of [https://github.com/mattdiamond/Recorderjs](Matt Diamond's recorder.js) aiming to get more sample precise recording

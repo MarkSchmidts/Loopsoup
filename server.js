@@ -1,6 +1,6 @@
 function isNumber(obj) { return !isNaN(parseFloat(obj)) }
 
-var htdocs_folder = 'htdocs',
+var htdocs_folder = 'app',
 port = 8080;
 
 

@@ -20,4 +20,6 @@ node server
 ```
 
 ### Details on the file structure
-* `htdocs/js/ls.recorder` is a rework of [Matt Diamond's recorder.js](https://github.com/mattdiamond/Recorderjs) aiming to get more sample precise recording
+* The root directory formost contains the https server and a certificate. Serving the application via https is necessary to provide the right security level for the Web Audio API.
+* The `app` folder contains all necessary static (not vendor) resources which will be served with the web server.
+* `app/js/ls.recorder` is a rework of [Matt Diamond's recorder.js](https://github.com/mattdiamond/Recorderjs) aiming to get more sample precise recording.

@@ -4,7 +4,7 @@ We wanna make the web rock. Therefor I started writing a Looper running on web t
 
 The aim is to have a looper application ready to run on all plattforms. May it be with your cell on the stage or your Mac jamming away with your friends in the studio. Loopsoup gives you an easy interface to build loops and create sounds on the fly.
 
-Plug your guitar or get your mic ready and try it: [loopsoup.com/try](https://loopsoup.com/try)
+Plug your guitar or get your mic ready and try it: [loopsoup.org/try](https://loopsoup.org/try)
 
 This is an open source initiate. Let's work together and make this work real tight.
 

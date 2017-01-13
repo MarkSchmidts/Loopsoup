@@ -1,6 +1,7 @@
 ## loopsoup ~ Webrecording for me and you
 ### Preamble
 We wanna make the web rock. Therefor I started writing a Looper running on web technologies such as Web Audio API, AngularJS, Bootstrap & PaperJS.
+It's still far from perfect, since the latency of incoming audio-stremas is making problems which affect exact timing.
 
 The aim is to have a looper application ready to run on all plattforms. May it be with your cell on the stage or your Mac jamming away with your friends in the studio. Loopsoup gives you an easy interface to build loops and create sounds on the fly.
 

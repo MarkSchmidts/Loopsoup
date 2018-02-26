@@ -4,7 +4,7 @@ var htdocs_folder = 'app',
 port = 8080;
 
 
-var url='https://localhost:'+port+'/';
+var url='https://localhost:'+port;
 
 console.log("serving target folder \"" + htdocs_folder+"\"");
 console.log("at port "+port);

@@ -37,7 +37,7 @@
     "angular-ui-bootstrap": "~0.12.1",
     "bootstrap": "~3.3.4",
     "express": "^4.16.2",
-    "jquery": "~2.2.4",
+    "jquery": "^3.3.1",
     "less": "~2.5.0",
     "lodash": "~4.16.6",
     "ngstorage": "~0.3.9",

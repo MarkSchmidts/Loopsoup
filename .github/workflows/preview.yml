@@ -6,7 +6,7 @@ on:
 
 jobs:
   test:
-    name: Run Tests
+    name: Unit Tests
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,11 +19,11 @@ jobs:
       - name: Install dependencies
         run: npm install --ignore-scripts
 
-      - name: Install test dependencies
-        run: npm install --save-dev jest jest-environment-jsdom --ignore-scripts
+      - name: Run unit tests
+        run: npm test
 
-      - name: Run tests
-        run: npx jest --verbose --no-cache
+      - name: Build
+        run: npm run build
 
   deploy:
     name: Deploy Preview
@@ -31,6 +31,8 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
     steps:
       - uses: actions/checkout@v4
 
@@ -63,7 +65,6 @@ jobs:
             const url = '${{ steps.deploy.outputs.url }}';
             const body = `## Preview Deployment\n\nDeployed to: ${url}\n\nThis preview will be updated on each push to this PR.`;
 
-            // Find existing comment
             const comments = await github.rest.issues.listComments({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -86,3 +87,26 @@ jobs:
                 body,
               });
             }
+
+  e2e:
+    name: E2E Tests
+    needs: deploy
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm install --ignore-scripts
+
+      - name: Install Playwright browsers
+        run: npx playwright install --with-deps chromium
+
+      - name: Run E2E tests against preview
+        run: npx playwright test
+        env:
+          PREVIEW_URL: ${{ needs.deploy.outputs.url }}

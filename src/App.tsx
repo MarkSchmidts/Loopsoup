@@ -150,13 +150,23 @@ export default function App() {
     } else {
       // Start recording
       setRecording(true)
-      // Only set the playback start time for the first track (no loop to sync to yet).
-      // For subsequent tracks, the indicator keeps tracking the existing loop position.
-      if (tracks.length === 0) {
-        useLooperStore.getState().setRecordStartTime(Date.now())
-      }
 
       const firstTrackLength = tracks.length > 0 ? tracks[0].buffer.length : 0
+
+      // Calculate where in the loop we are (in samples) so we can align the recording.
+      // For the first track there's nothing to align to.
+      let loopOffsetSamples = 0
+      if (firstTrackLength > 0) {
+        const state = useLooperStore.getState()
+        const ctx = engine.getAudioContext()
+        const sr = ctx?.sampleRate ?? 44100
+        const loopDurationMs = (firstTrackLength / sr) * 1000
+        const elapsedMs = Date.now() - state.recordStartTime
+        const positionMs = elapsedMs % loopDurationMs
+        loopOffsetSamples = Math.round((positionMs / loopDurationMs) * firstTrackLength)
+      } else {
+        useLooperStore.getState().setRecordStartTime(Date.now())
+      }
 
       engine.startRecording((rawL, rawR) => {
         if (rawL.length === 0) return
@@ -189,6 +199,26 @@ export default function App() {
             processedR.slice(latencyFrames),
             processedR.slice(processedR.length - latencyFrames)
           )
+        }
+
+        // Rotate buffer to align with loop position.
+        // Recording started at loopOffsetSamples into the loop, so:
+        //   recorded[0..N-offset] was captured at loop position [offset..end]
+        //   recorded[N-offset..N] was captured at loop position [0..offset]
+        // We rotate so each sample lands at the correct loop position.
+        if (loopOffsetSamples > 0 && processedL.length > 0) {
+          const len = processedL.length
+          const rotatedL = new Float32Array(len)
+          const rotatedR = new Float32Array(len)
+          const tail = len - loopOffsetSamples
+          // Part recorded at loop positions [offset..end] → place at buffer[offset..end]
+          rotatedL.set(processedL.subarray(0, tail), loopOffsetSamples)
+          rotatedR.set(processedR.subarray(0, tail), loopOffsetSamples)
+          // Part recorded at loop positions [0..offset] → place at buffer[0..offset]
+          rotatedL.set(processedL.subarray(tail), 0)
+          rotatedR.set(processedR.subarray(tail), 0)
+          processedL = rotatedL
+          processedR = rotatedR
         }
 
         const track: Track = {

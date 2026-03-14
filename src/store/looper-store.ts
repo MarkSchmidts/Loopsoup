@@ -22,6 +22,7 @@ interface LooperState {
   latencyMs: number
   calibrationMode: boolean
   recordStartTime: number
+  sampleRate: number
 
   // Actions
   addTrack: (track: Track) => void
@@ -39,6 +40,7 @@ interface LooperState {
   setRecordStartTime: (time: number) => void
   setTrackOffset: (index: number, offset: number) => void
   getTrackColor: (index: number) => string
+  setSampleRate: (rate: number) => void
 }
 
 export const useLooperStore = create<LooperState>()((set) => ({
@@ -50,6 +52,7 @@ export const useLooperStore = create<LooperState>()((set) => ({
   latencyMs: 60,
   calibrationMode: false,
   recordStartTime: 0,
+  sampleRate: 44100,
 
   addTrack: (track) => set((state) => ({ tracks: [...state.tracks, track] })),
 
@@ -97,4 +100,5 @@ export const useLooperStore = create<LooperState>()((set) => ({
     })),
 
   getTrackColor: (index) => TRACK_COLORS[index % TRACK_COLORS.length],
+  setSampleRate: (rate) => set({ sampleRate: rate }),
 }))

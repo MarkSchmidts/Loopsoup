@@ -28,7 +28,6 @@ export default function App() {
   const selectedTrack = useLooperStore((s) => s.selectedTrack)
   const addTrack = useLooperStore((s) => s.addTrack)
   const setRecording = useLooperStore((s) => s.setRecording)
-  const setRecordStartTime = useLooperStore((s) => s.setRecordStartTime)
   const removeTrack = useLooperStore((s) => s.removeTrack)
   const removeAllTracks = useLooperStore((s) => s.removeAllTracks)
   const undoLastTrack = useLooperStore((s) => s.undoLastTrack)
@@ -45,7 +44,10 @@ export default function App() {
     const engine = engineRef.current
     if (engine.isInitialized()) return
     if (!initPromiseRef.current) {
-      initPromiseRef.current = engine.init()
+      initPromiseRef.current = engine.init().then(() => {
+        const ctx = engine.getAudioContext()
+        if (ctx) useLooperStore.getState().setSampleRate(ctx.sampleRate)
+      })
     }
     await initPromiseRef.current
   }, [])
@@ -93,6 +95,11 @@ export default function App() {
         trackGainsRef.current.push(gain)
       }
     })
+
+    // Sync playback indicator: mark when this set of tracks started playing
+    if (tracks.length > 0) {
+      useLooperStore.getState().setRecordStartTime(Date.now())
+    }
   }, [tracks])
 
   // Sync per-track volume/mute to audio gain nodes
@@ -143,7 +150,11 @@ export default function App() {
     } else {
       // Start recording
       setRecording(true)
-      setRecordStartTime(Date.now())
+      // Only set the playback start time for the first track (no loop to sync to yet).
+      // For subsequent tracks, the indicator keeps tracking the existing loop position.
+      if (tracks.length === 0) {
+        useLooperStore.getState().setRecordStartTime(Date.now())
+      }
 
       const firstTrackLength = tracks.length > 0 ? tracks[0].buffer.length : 0
 
@@ -192,7 +203,7 @@ export default function App() {
         addTrack(track)
       })
     }
-  }, [isRecording, tracks, addTrack, setRecording, setRecordStartTime, ensureInit])
+  }, [isRecording, tracks, addTrack, setRecording, ensureInit])
 
   const handleDelete = useCallback(() => {
     if (selectedTrack === -1) {

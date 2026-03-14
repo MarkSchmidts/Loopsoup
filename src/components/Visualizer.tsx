@@ -17,6 +17,7 @@ export function Visualizer({ getAmplitude, onRecClick, onTrackClick }: Visualize
   const isRecording = useLooperStore((s) => s.isRecording)
   const recordStartTime = useLooperStore((s) => s.recordStartTime)
   const selectedTrack = useLooperStore((s) => s.selectedTrack)
+  const sampleRate = useLooperStore((s) => s.sampleRate)
 
   const draw = useCallback(() => {
     const canvas = canvasRef.current
@@ -112,7 +113,7 @@ export function Visualizer({ getAmplitude, onRecClick, onTrackClick }: Visualize
     // Loop progress marker - positioned well outside the outermost track ring
     if (tracks.length > 0) {
       const firstTrack = tracks[0]
-      const duration = firstTrack.buffer.length / 44100 * 1000 // ms
+      const duration = firstTrack.buffer.length / sampleRate * 1000 // ms
       if (duration > 0) {
         const elapsed = Date.now() - recordStartTime
         const progress = (elapsed / duration) % 1
@@ -138,7 +139,7 @@ export function Visualizer({ getAmplitude, onRecClick, onTrackClick }: Visualize
     }
 
     animRef.current = requestAnimationFrame(draw)
-  }, [tracks, isRecording, recordStartTime, selectedTrack, getAmplitude])
+  }, [tracks, isRecording, recordStartTime, selectedTrack, sampleRate, getAmplitude])
 
   useEffect(() => {
     const canvas = canvasRef.current

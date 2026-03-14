@@ -1,0 +1,9 @@
+{
+  "outputDirectory": "app",
+  "installCommand": "npm install --ignore-scripts",
+  "buildCommand": null,
+  "framework": null,
+  "rewrites": [
+    { "source": "/(.*)", "destination": "/$1" }
+  ]
+}

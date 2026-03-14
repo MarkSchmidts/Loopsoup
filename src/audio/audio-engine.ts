@@ -13,6 +13,7 @@ export class AudioEngine {
   private recording = false
   private initialized = false
   private savedMasterVolume = 1
+  private micAccessGranted = false
 
   // Recording state
   private processor: ScriptProcessorNode | null = null
@@ -40,8 +41,15 @@ export class AudioEngine {
       this.input = this.ctx.createMediaStreamSource(stream)
       this.input.connect(this.inputAnalyser)
       this.inputAnalyser.connect(this.monitorGain)
+      this.micAccessGranted = true
     } catch {
       console.warn('Microphone access denied or unavailable')
+      this.micAccessGranted = false
+    }
+
+    // Resume AudioContext (may be suspended if created outside user gesture)
+    if (this.ctx.state === 'suspended') {
+      await this.ctx.resume()
     }
 
     this.initialized = true
@@ -53,6 +61,10 @@ export class AudioEngine {
 
   isRecording(): boolean {
     return this.recording
+  }
+
+  hasMicAccess(): boolean {
+    return this.micAccessGranted
   }
 
   getAudioContext(): AudioContext | null {
@@ -77,7 +89,12 @@ export class AudioEngine {
    * concatenated left and right channel Float32Arrays.
    */
   startRecording(callback?: RecordingCallback): void {
-    if (!this.initialized || !this.ctx || !this.inputAnalyser) return
+    if (!this.initialized || !this.ctx || !this.inputAnalyser || !this.micAccessGranted) return
+
+    // Resume context if suspended (e.g. Chrome autoplay policy)
+    if (this.ctx.state === 'suspended') {
+      this.ctx.resume()
+    }
 
     this.recording = true
     this.recordCallback = callback || null
@@ -85,20 +102,21 @@ export class AudioEngine {
     this.buffersR = []
     this.totalRecordedLength = 0
 
-    this.processor = this.ctx.createScriptProcessor(4096, 2, 2)
+    // Use 1 input channel (mono mic) to avoid channel mismatch issues
+    this.processor = this.ctx.createScriptProcessor(4096, 1, 1)
 
     this.processor.onaudioprocess = (e: AudioProcessingEvent) => {
       if (!this.recording) return
 
-      const inputL = new Float32Array(e.inputBuffer.getChannelData(0))
-      const inputR = new Float32Array(e.inputBuffer.getChannelData(1))
-      this.buffersL.push(inputL)
-      this.buffersR.push(inputR)
-      this.totalRecordedLength += inputL.length
+      // Capture mono input into both L and R channels
+      const inputData = new Float32Array(e.inputBuffer.getChannelData(0))
+      this.buffersL.push(inputData)
+      this.buffersR.push(new Float32Array(inputData))
+      this.totalRecordedLength += inputData.length
     }
 
     // Connect: analyser -> processor -> destination
-    // (processor must be connected to destination to fire onaudioprocess)
+    // (processor must be connected to destination for onaudioprocess to fire)
     this.inputAnalyser.connect(this.processor)
     this.processor.connect(this.ctx.destination)
   }
@@ -219,5 +237,6 @@ export class AudioEngine {
     this.processor = null
     this.initialized = false
     this.recording = false
+    this.micAccessGranted = false
   }
 }

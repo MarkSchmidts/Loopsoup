@@ -127,6 +127,36 @@ describe('AudioEngine', () => {
     })
   })
 
+  describe('AudioContext resume', () => {
+    it('resumes AudioContext on init', async () => {
+      await engine.init()
+      const ctx = engine.getAudioContext()!
+      // resume() should have been called during init
+      expect(ctx.state).toBe('running')
+    })
+
+    it('resumes AudioContext when starting recording', async () => {
+      await engine.init()
+      engine.startRecording()
+      // After startRecording, context should be running
+      const ctx = engine.getAudioContext()!
+      expect(ctx.state).toBe('running')
+    })
+  })
+
+  describe('mic access tracking', () => {
+    it('reports mic access status', async () => {
+      await engine.init()
+      expect(engine.hasMicAccess()).toBe(true)
+    })
+
+    it('does not start recording without mic access', async () => {
+      // engine not initialized
+      engine.startRecording()
+      expect(engine.isRecording()).toBe(false)
+    })
+  })
+
   describe('cleanup', () => {
     it('disposes without error', async () => {
       await engine.init()

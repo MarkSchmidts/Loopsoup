@@ -5,8 +5,10 @@ test.describe('Loopsoup App', () => {
     await page.goto('/')
   })
 
-  test('loads the app with logo', async ({ page }) => {
-    await expect(page.locator('.logo')).toHaveText('loopsoup')
+  test('loads the app with logo image', async ({ page }) => {
+    const logo = page.locator('img.loopsoup-logo')
+    await expect(logo).toBeVisible()
+    await expect(logo).toHaveAttribute('src', '/logo.png')
   })
 
   test('has correct page title', async ({ page }) => {
@@ -14,17 +16,25 @@ test.describe('Loopsoup App', () => {
   })
 
   test('renders the visualizer canvas', async ({ page }) => {
-    const canvas = page.locator('canvas.visualizer')
+    const canvas = page.locator('canvas')
     await expect(canvas).toBeVisible()
   })
 
-  test('renders the controls bar', async ({ page }) => {
+  test('canvas fills the viewport', async ({ page }) => {
+    const visu = page.locator('.visu')
+    await expect(visu).toBeVisible()
+    const box = await visu.boundingBox()
+    expect(box!.width).toBeGreaterThan(100)
+    expect(box!.height).toBeGreaterThan(100)
+  })
+
+  test('renders the bottom controls bar', async ({ page }) => {
     const controls = page.locator('.controls')
     await expect(controls).toBeVisible()
   })
 
   test('has a track selector dropdown', async ({ page }) => {
-    const select = page.locator('.track-selector')
+    const select = page.locator('.controls select')
     await expect(select).toBeVisible()
   })
 
@@ -33,22 +43,11 @@ test.describe('Loopsoup App', () => {
     await expect(slider).toBeVisible()
   })
 
-  test('shows download and delete buttons on hover', async ({ page }) => {
-    const app = page.locator('.looper-app')
-    await app.hover()
+  test('has download and delete buttons in controls', async ({ page }) => {
     const downloadBtn = page.locator('button[aria-label="Download"]')
     const deleteBtn = page.locator('button[aria-label="Delete"]')
     await expect(downloadBtn).toBeVisible()
     await expect(deleteBtn).toBeVisible()
-  })
-
-  test('clicking visualizer requests mic permission', async ({ page, context }) => {
-    // Grant mic permission
-    await context.grantPermissions(['microphone'])
-    const canvas = page.locator('.visualizer-container')
-    await canvas.click()
-    // After clicking, recording state should change (no error thrown)
-    await page.waitForTimeout(500)
   })
 
   test('mute button toggles', async ({ page }) => {

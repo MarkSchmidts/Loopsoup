@@ -14,8 +14,10 @@ describe('App', () => {
     expect(screen.getByRole('slider')).toBeDefined()
   })
 
-  it('renders the header with logo text', () => {
+  it('renders the logo image', () => {
     render(<App />)
-    expect(screen.getByText('loopsoup')).toBeDefined()
+    const logo = screen.getByAltText('loopsoup logo')
+    expect(logo).toBeDefined()
+    expect(logo.getAttribute('src')).toBe('/logo.png')
   })
 })

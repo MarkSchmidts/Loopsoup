@@ -48,16 +48,6 @@ export default function App() {
     }
   }, [masterVolume, masterMuted])
 
-  // Sync track volumes
-  useEffect(() => {
-    tracks.forEach((_track, i) => {
-      const source = sourcesRef.current[i]
-      if (source) {
-        // Track gain is handled via GainNodes in playback
-      }
-    })
-  }, [tracks])
-
   // Replay all tracks when tracks change
   useEffect(() => {
     const engine = engineRef.current
@@ -87,14 +77,11 @@ export default function App() {
     if (!engine.isInitialized()) return
 
     if (isRecording) {
-      // Stop recording - in a real app, we'd get the recorded buffer from
-      // a MediaRecorder or ScriptProcessor. For now, we use a simplified approach.
       setRecording(false)
     } else {
       setRecording(true)
       setRecordStartTime(Date.now())
 
-      // Start MediaRecorder-based recording
       const ctx = engine.getAudioContext()!
       const analyser = engine.getAnalyser()
       if (!analyser) return
@@ -111,7 +98,6 @@ export default function App() {
           processor.disconnect()
           analyser.disconnect(processor)
 
-          // Build final buffer
           const finalL = new Float32Array(totalLength)
           const finalR = new Float32Array(totalLength)
           let offset = 0
@@ -125,7 +111,6 @@ export default function App() {
             offset += b.length
           }
 
-          // Trim or pad to match first track
           let processedL: Float32Array = finalL
           let processedR: Float32Array = finalR
           if (firstTrackLength > 0) {
@@ -138,7 +123,6 @@ export default function App() {
             }
           }
 
-          // Latency compensation
           const latencyFrames = Math.floor(ctx.sampleRate * (latencyMs / 1000))
           if (latencyFrames > 0 && processedL.length > latencyFrames) {
             processedL = mergeFloat32Arrays(
@@ -170,7 +154,6 @@ export default function App() {
         buffersR.push(inputR)
         totalLength += inputL.length
 
-        // Auto-stop when first loop length reached
         if (firstTrackLength > 0 && totalLength >= firstTrackLength) {
           useLooperStore.getState().setRecording(false)
         }
@@ -183,7 +166,7 @@ export default function App() {
 
   const handleDelete = useCallback(() => {
     if (selectedTrack === -1) {
-      if (tracks.length > 0 && window.confirm('Delete all tracks?')) {
+      if (tracks.length > 0 && window.confirm('Currently all tracks are selected. Do you want to delete them all?')) {
         removeAllTracks()
       }
     } else {
@@ -197,7 +180,6 @@ export default function App() {
     let left: Float32Array, right: Float32Array, filename: string
 
     if (selectedTrack === -1) {
-      // Merge all tracks
       const len = tracks[0].buffer.length
       left = new Float32Array(len)
       right = new Float32Array(len)
@@ -244,30 +226,21 @@ export default function App() {
   }, [handleToggleRec, handleDelete, undoLastTrack])
 
   return (
-    <div className="looper-app">
-      <header className="header">
-        <h1 className="logo">loopsoup</h1>
-      </header>
+    <>
+      <img className="loopsoup-logo" alt="loopsoup logo" src="/logo.png" />
 
-      <div className="visualizer-container" onClick={handleToggleRec}>
+      <div className="visu" onClick={handleToggleRec}>
         <Visualizer />
       </div>
 
-      <Controls />
-
-      <div className="controls-actions">
-        <button onClick={handleDownload} aria-label="Download" className="action-btn">
-          ⬇ Download
-        </button>
-        <button onClick={handleDelete} aria-label="Delete" className="action-btn action-btn-danger">
-          🗑 Delete
-        </button>
-      </div>
-    </div>
+      <Controls
+        onDownload={handleDownload}
+        onDelete={handleDelete}
+      />
+    </>
   )
 }
 
-// Type augmentation for AudioProcessEvent
 interface AudioProcessEvent extends Event {
   inputBuffer: AudioBuffer
   outputBuffer: AudioBuffer

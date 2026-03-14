@@ -1,0 +1,287 @@
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  overflow: hidden;
+  height: 100%;
+  font-family: sans-serif;
+  font-size: 14px;
+  background: #1a1a1a;
+  color: #fff;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+#root {
+  height: 100%;
+  width: 100%;
+}
+
+/* Logo - matches legacy .loopsoup.logo */
+.loopsoup-logo {
+  position: fixed;
+  top: 6px;
+  left: 15px;
+  width: 153px;
+  z-index: 10;
+}
+
+/* Canvas fills entire viewport */
+.visu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 1;
+  cursor: pointer;
+}
+
+.visu canvas {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+}
+
+/* Bottom controls bar - matches legacy .controls.bottom */
+.controls {
+  position: fixed;
+  bottom: 0;
+  width: 100%;
+  padding: 0 11px 12px 0;
+  z-index: 100;
+  display: flex;
+  align-items: center;
+  height: 48px;
+}
+
+.controls > * {
+  margin-left: 16px;
+  flex-shrink: 0;
+}
+
+/* Track selector - matches legacy select styling */
+.controls select {
+  background: white;
+  color: black;
+  border: 2px black solid;
+  border-radius: 5px;
+  font-size: 1.4em;
+  font-weight: bold;
+  width: 71px;
+  height: 40px;
+  cursor: pointer;
+}
+
+/* Icon buttons - sized to match legacy icon font spans */
+.controls .icon-btn {
+  font-size: 24px;
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: inherit;
+  padding: 0;
+  line-height: 1;
+}
+
+/* Volume slider */
+.volume-slider-wrap {
+  flex: 1;
+  min-width: 80px;
+  max-width: 200px;
+  display: flex;
+  align-items: center;
+}
+
+.volume-slider {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 100%;
+  height: 2px;
+  background: #ccc;
+  border-radius: 1px;
+  outline: none;
+}
+
+.volume-slider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #333;
+  cursor: pointer;
+  border: none;
+}
+
+.volume-slider::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  background-color: #333;
+  cursor: pointer;
+  border: none;
+}
+
+/* Calibration panel - matches legacy .top.right */
+.calibration-panel {
+  position: fixed;
+  top: 16px;
+  right: 14px;
+  z-index: 100;
+  color: white;
+}
+
+.calibration-panel input {
+  width: 67px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  margin-right: 8px;
+}
+
+/* Icon buttons - display flex for SVG alignment */
+.controls .icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: #222;
+  color: #eee;
+  border-radius: 8px;
+  padding: 24px 32px;
+  max-width: 520px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-content h3 {
+  margin-bottom: 16px;
+  font-size: 1.4em;
+}
+
+.modal-content p {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.modal-content ul {
+  padding-left: 20px;
+  margin-bottom: 16px;
+}
+
+.modal-content li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.modal-content a {
+  color: #6AB26D;
+}
+
+.modal-footer {
+  text-align: right;
+  margin-top: 16px;
+}
+
+.modal-btn {
+  background: #6AB26D;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 24px;
+  font-size: 1em;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.modal-btn:hover {
+  background: #5a9e5d;
+}
+
+.modal-btn-danger {
+  background: #c0392b;
+  margin-left: 8px;
+}
+
+.modal-btn-danger:hover {
+  background: #a93226;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  cursor: pointer;
+  font-size: 0.9em;
+  color: #aaa;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* Keyboard shortcuts table */
+.shortcuts-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+
+.shortcuts-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #444;
+}
+
+.shortcuts-table td:first-child {
+  width: 100px;
+  text-align: center;
+}
+
+kbd {
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-family: monospace;
+  font-size: 0.95em;
+}
+
+/* Responsive - matches legacy */
+@media (max-width: 280px) {
+  body { font-size: 8px; }
+}
+@media (max-width: 490px) {
+  body { font-size: 10px; }
+}
+@media (max-width: 620px) {
+  body { font-size: 12px; }
+}

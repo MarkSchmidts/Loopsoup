@@ -1,51 +1,50 @@
 {
   "name": "loopsoup",
-  "version": "0.1.0",
-  "description": "webrecording for you and me",
-  "main": "index.js",
+  "private": true,
+  "version": "2.0.0",
+  "type": "module",
+  "description": "Browser-based audio looper / loopstation",
   "scripts": {
-    "install": "napa rzajac/angularjs-slider chieffancypants/angular-hotkeys",
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "test:e2e": "playwright test",
+    "lint": "eslint ."
   },
   "repository": {
     "type": "git",
     "url": "https://github.com/MarkSchmidts/Loopsoup"
   },
   "keywords": [
-    "webrecording",
-    "webaudio",
-    "web",
-    "audio",
-    "looping",
-    "recording",
-    "paper",
-    "angular",
-    "bootstrap",
-    "javascript",
-    "music",
-    "looper",
-    "loopstation"
+    "webrecording", "webaudio", "looping", "recording",
+    "react", "typescript", "vite", "music", "looper", "loopstation"
   ],
   "author": "Mark Schmidts",
   "license": "GPL-3.0",
-  "bugs": {
-    "url": "https://github.com/MarkSchmidts/Loopsoup/issues"
-  },
   "dependencies": {
-    "an": "0.0.8",
-    "angular": "~1.4.9",
-    "angular-ui-bootstrap": "~0.12.1",
-    "bootstrap": "~3.3.4",
-    "express": "^4.16.2",
-    "jquery": "^3.3.1",
-    "less": "~2.5.0",
-    "lodash": "~4.16.6",
-    "ngstorage": "~0.3.9",
-    "normalize.css": "~3.0.3",
-    "open": "0.0.5",
-    "paper": "git://github.com/paperjs/paper.js"
+    "react": "^19.2.4",
+    "react-dom": "^19.2.4",
+    "zustand": "^5.0.0"
   },
   "devDependencies": {
-    "napa": "~2.3.0"
+    "@eslint/js": "^9.39.4",
+    "@playwright/test": "^1.52.0",
+    "@testing-library/jest-dom": "^6.6.0",
+    "@testing-library/react": "^16.3.0",
+    "@types/node": "^24.12.0",
+    "@types/react": "^19.2.14",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.0.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.4.0",
+    "jsdom": "^26.1.0",
+    "typescript": "~5.9.3",
+    "typescript-eslint": "^8.56.1",
+    "vite": "^8.0.0",
+    "vitest": "^3.2.1"
   }
 }

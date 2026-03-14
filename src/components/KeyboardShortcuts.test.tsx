@@ -11,7 +11,7 @@ describe('KeyboardShortcuts', () => {
   it('lists Space shortcut', () => {
     render(<KeyboardShortcuts onClose={() => {}} />)
     expect(screen.getByText('Space')).toBeDefined()
-    expect(screen.getByText('Toggle recording (start/stop)')).toBeDefined()
+    expect(screen.getByText('Toggle recording (tap). Hold 2s: undo last. Hold 10s: delete all')).toBeDefined()
   })
 
   it('lists Enter shortcut', () => {

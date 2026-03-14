@@ -228,14 +228,35 @@ export default function App() {
   // Keyboard shortcuts (matches legacy uiController hotkeys)
   useEffect(() => {
     const VOLUME_STEP = 4
+    const SPACE_HOLD_TIME = 2000
+    let spaceHoldStart: number | null = null
+    let spaceHoldInterval: ReturnType<typeof setInterval> | null = null
 
-    const handleKey = (e: KeyboardEvent) => {
+    const handleKeyDown = (e: KeyboardEvent) => {
       // Don't handle shortcuts when a modal is open (modals handle their own keys)
       if (showDisclaimer || showShortcuts) return
 
       if (e.code === 'Space') {
         e.preventDefault()
-        handleToggleRec()
+        // Space hold logic: track when key was first pressed
+        if (spaceHoldStart === null) {
+          spaceHoldStart = Date.now()
+        }
+        const holdingSince = Date.now() - spaceHoldStart
+        // After holding 2s, start deleting last track every 2s
+        if (spaceHoldInterval === null && holdingSince > SPACE_HOLD_TIME) {
+          undoLastTrack()
+          spaceHoldInterval = setInterval(() => {
+            undoLastTrack()
+          }, SPACE_HOLD_TIME)
+        }
+        // After holding 10s, delete all tracks
+        if (holdingSince > SPACE_HOLD_TIME * 5) {
+          removeAllTracks()
+          if (spaceHoldInterval !== null) clearInterval(spaceHoldInterval)
+          spaceHoldStart = null
+          spaceHoldInterval = null
+        }
       } else if (e.code === 'Enter') {
         e.preventDefault()
         undoLastTrack()
@@ -279,9 +300,30 @@ export default function App() {
       }
     }
 
-    window.addEventListener('keydown', handleKey)
-    return () => window.removeEventListener('keydown', handleKey)
-  }, [handleToggleRec, handleDelete, undoLastTrack, showDisclaimer, showShortcuts])
+    const handleKeyUp = (e: KeyboardEvent) => {
+      if (showDisclaimer || showShortcuts) return
+
+      if (e.code === 'Space') {
+        e.preventDefault()
+        // Short press (< 2s): toggle recording
+        if (spaceHoldStart !== null && Date.now() - spaceHoldStart < SPACE_HOLD_TIME) {
+          handleToggleRec()
+        } else if (spaceHoldInterval !== null) {
+          clearInterval(spaceHoldInterval)
+        }
+        spaceHoldStart = null
+        spaceHoldInterval = null
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    window.addEventListener('keyup', handleKeyUp)
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown)
+      window.removeEventListener('keyup', handleKeyUp)
+      if (spaceHoldInterval !== null) clearInterval(spaceHoldInterval)
+    }
+  }, [handleToggleRec, handleDelete, undoLastTrack, removeAllTracks, showDisclaimer, showShortcuts])
 
   // Amplitude getter for Visualizer
   const getAmplitude = useCallback(() => {

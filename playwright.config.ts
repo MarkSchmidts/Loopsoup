@@ -12,4 +12,11 @@ export default defineConfig({
   projects: [
     { name: 'chromium', use: { browserName: 'chromium' } },
   ],
+  webServer: process.env.PREVIEW_URL
+    ? undefined
+    : {
+        command: 'npm run preview',
+        port: 4173,
+        reuseExistingServer: !process.env.CI,
+      },
 })

@@ -5,7 +5,7 @@ interface KeyboardShortcutsProps {
 }
 
 const SHORTCUTS = [
-  { key: 'Space', description: 'Toggle recording (start/stop)' },
+  { key: 'Space', description: 'Toggle recording (tap). Hold 2s: undo last. Hold 10s: delete all' },
   { key: 'Enter', description: 'Undo last track' },
   { key: 'Delete', description: 'Delete selected track(s)' },
   { key: '\u2192', description: 'Increase volume' },

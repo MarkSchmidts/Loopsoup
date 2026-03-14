@@ -92,7 +92,7 @@ jobs:
 
   e2e:
     name: E2E Tests
-    needs: deploy
+    needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -105,10 +105,11 @@ jobs:
       - name: Install dependencies
         run: npm install --ignore-scripts
 
+      - name: Build
+        run: npm run build
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
-      - name: Run E2E tests against preview
+      - name: Run E2E tests
         run: npx playwright test
-        env:
-          PREVIEW_URL: ${{ needs.deploy.outputs.url }}

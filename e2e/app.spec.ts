@@ -79,12 +79,14 @@ test.describe('Loopsoup App', () => {
   })
 
   test('shows keyboard shortcuts on ? key', async ({ page }) => {
-    // Use Shift+Slash to produce ? (works reliably across keyboard layouts)
-    await page.keyboard.press('Shift+Slash')
+    // Dispatch keydown with key='?' directly to avoid keyboard layout issues
+    await page.evaluate(() => {
+      window.dispatchEvent(new KeyboardEvent('keydown', { key: '?', shiftKey: true, bubbles: true }))
+    })
     const modal = page.locator('.modal-overlay')
     await expect(modal).toBeVisible()
     await expect(page.locator('text=Keyboard Shortcuts')).toBeVisible()
-    await expect(page.locator('text=Toggle recording')).toBeVisible()
+    await expect(page.locator('text=Toggle recording (tap)')).toBeVisible()
     // Dismiss with Escape
     await page.keyboard.press('Escape')
     await expect(modal).not.toBeVisible()

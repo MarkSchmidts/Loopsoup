@@ -35,4 +35,16 @@ describe('Icons', () => {
     const svg = container.querySelector('svg')!
     expect(svg.classList.contains('test-class')).toBe(true)
   })
+
+  it('applies custom color', () => {
+    const { container } = render(<DownloadIcon color="#ff0000" />)
+    const svg = container.querySelector('svg')!
+    expect(svg.getAttribute('stroke')).toBe('#ff0000')
+  })
+
+  it('defaults to white stroke', () => {
+    const { container } = render(<VolumeHighIcon />)
+    const svg = container.querySelector('svg')!
+    expect(svg.getAttribute('stroke')).toBe('#fff')
+  })
 })

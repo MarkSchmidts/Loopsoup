@@ -1,12 +1,13 @@
 interface IconProps {
   size?: number
+  color?: string
   className?: string
   style?: React.CSSProperties
 }
 
-export function DownloadIcon({ size = 24, className, style }: IconProps) {
+export function DownloadIcon({ size = 24, color = '#fff', className, style }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
       <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
       <polyline points="7 10 12 15 17 10" />
@@ -15,9 +16,9 @@ export function DownloadIcon({ size = 24, className, style }: IconProps) {
   )
 }
 
-export function TrashIcon({ size = 24, className, style }: IconProps) {
+export function TrashIcon({ size = 24, color = '#fff', className, style }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
       <polyline points="3 6 5 6 21 6" />
       <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
@@ -27,9 +28,9 @@ export function TrashIcon({ size = 24, className, style }: IconProps) {
   )
 }
 
-export function VolumeHighIcon({ size = 24, className, style }: IconProps) {
+export function VolumeHighIcon({ size = 24, color = '#fff', className, style }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
       <path d="M19.07 4.93a10 10 0 0 1 0 14.14" />
@@ -38,9 +39,9 @@ export function VolumeHighIcon({ size = 24, className, style }: IconProps) {
   )
 }
 
-export function VolumeMuteIcon({ size = 24, className, style }: IconProps) {
+export function VolumeMuteIcon({ size = 24, color = '#fff', className, style }: IconProps) {
   return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke="currentColor"
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color}
       strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className={className} style={style}>
       <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5" />
       <line x1="23" y1="9" x2="17" y2="15" />

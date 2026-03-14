@@ -3,11 +3,14 @@ import { DownloadIcon, TrashIcon, VolumeHighIcon, VolumeMuteIcon } from './Icons
 
 const TRACK_COLORS = ['#6AB26D', '#4D9CB6', '#E95013', '#A600EB', '#FF002D']
 
+function getTrackGlowColor(trackIndex: number): string {
+  return trackIndex === -1 ? '#fff' : TRACK_COLORS[trackIndex % TRACK_COLORS.length]
+}
+
 function getGlowStyle(trackIndex: number): React.CSSProperties {
-  const color = trackIndex === -1 ? '#fff' : TRACK_COLORS[trackIndex % TRACK_COLORS.length]
+  const color = getTrackGlowColor(trackIndex)
   return {
     filter: `drop-shadow(0 0 6px ${color})`,
-    color,
   }
 }
 
@@ -83,7 +86,7 @@ export function Controls({ onDownload, onDelete }: ControlsProps) {
         onClick={onDownload}
         style={getGlowStyle(selectedTrack)}
       >
-        <DownloadIcon size={22} />
+        <DownloadIcon size={22} color={getTrackGlowColor(selectedTrack)} />
       </button>
 
       <button
@@ -93,7 +96,7 @@ export function Controls({ onDownload, onDelete }: ControlsProps) {
         onClick={onDelete}
         style={getGlowStyle(selectedTrack)}
       >
-        <TrashIcon size={22} />
+        <TrashIcon size={22} color={getTrackGlowColor(selectedTrack)} />
       </button>
 
       <button
@@ -103,7 +106,9 @@ export function Controls({ onDownload, onDelete }: ControlsProps) {
         title={isMuted ? 'Unmute' : 'Mute'}
         style={getGlowStyle(selectedTrack)}
       >
-        {isMuted ? <VolumeMuteIcon size={22} /> : <VolumeHighIcon size={22} />}
+        {isMuted
+          ? <VolumeMuteIcon size={22} color={getTrackGlowColor(selectedTrack)} />
+          : <VolumeHighIcon size={22} color={getTrackGlowColor(selectedTrack)} />}
       </button>
 
       <div className="volume-slider-wrap" style={getSelectGlowStyle(selectedTrack)}>

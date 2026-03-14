@@ -224,6 +224,31 @@ body {
   background: #5a9e5d;
 }
 
+.modal-btn-danger {
+  background: #c0392b;
+  margin-left: 8px;
+}
+
+.modal-btn-danger:hover {
+  background: #a93226;
+}
+
+.checkbox-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  cursor: pointer;
+  font-size: 0.9em;
+  color: #aaa;
+}
+
+.checkbox-label input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
 /* Keyboard shortcuts table */
 .shortcuts-table {
   width: 100%;

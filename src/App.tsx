@@ -1,6 +1,7 @@
 import { useEffect, useRef, useCallback, useState } from 'react'
 import { Controls } from './components/Controls'
 import { Visualizer } from './components/Visualizer'
+import { DeleteConfirmModal } from './components/DeleteConfirmModal'
 import { DisclaimerModal } from './components/DisclaimerModal'
 import { KeyboardShortcuts } from './components/KeyboardShortcuts'
 import { AudioEngine } from './audio/audio-engine'
@@ -18,6 +19,7 @@ function getEngine(): AudioEngine {
 export default function App() {
   const engineRef = useRef<AudioEngine>(getEngine())
   const sourcesRef = useRef<AudioBufferSourceNode[]>([])
+  const trackGainsRef = useRef<GainNode[]>([])
 
   const tracks = useLooperStore((s) => s.tracks)
   const isRecording = useLooperStore((s) => s.isRecording)
@@ -35,6 +37,7 @@ export default function App() {
     return !localStorage.getItem('loopsoup_disclaimer_seen')
   })
   const [showShortcuts, setShowShortcuts] = useState(false)
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false)
 
   const initPromiseRef = useRef<Promise<void> | null>(null)
 
@@ -74,6 +77,7 @@ export default function App() {
       try { s.stop() } catch { /* ignore */ }
     })
     sourcesRef.current = []
+    trackGainsRef.current = []
 
     // Start new sources
     tracks.forEach((track) => {
@@ -82,11 +86,24 @@ export default function App() {
         const buf = ctx.createBuffer(2, track.buffer.length, ctx.sampleRate)
         buf.copyToChannel(new Float32Array(track.buffer), 0)
         buf.copyToChannel(new Float32Array(track.bufferR), 1)
-        const source = engine.playBuffer(buf, track.offset)
+        const { source, gain } = engine.playBuffer(buf, track.offset)
+        // Apply current track volume/mute state
+        gain.gain.value = track.muted ? 0 : track.volume / 100
         sourcesRef.current.push(source)
+        trackGainsRef.current.push(gain)
       }
     })
   }, [tracks])
+
+  // Sync per-track volume/mute to audio gain nodes
+  useEffect(() => {
+    tracks.forEach((track, i) => {
+      const gain = trackGainsRef.current[i]
+      if (gain) {
+        gain.gain.value = track.muted ? 0 : track.volume / 100
+      }
+    })
+  })
 
   // Auto-stop recording when first loop length is reached
   useEffect(() => {
@@ -179,11 +196,25 @@ export default function App() {
 
   const handleDelete = useCallback(() => {
     if (selectedTrack === -1) {
-      removeAllTracks()
+      if (tracks.length === 0) return
+      const skipConfirm = localStorage.getItem('loopsoup_skip_delete_confirm')
+      if (skipConfirm) {
+        removeAllTracks()
+      } else {
+        setShowDeleteConfirm(true)
+      }
     } else {
       removeTrack(selectedTrack)
     }
-  }, [selectedTrack, removeAllTracks, removeTrack])
+  }, [selectedTrack, tracks.length, removeAllTracks, removeTrack])
+
+  const handleConfirmDeleteAll = useCallback((dontShowAgain: boolean) => {
+    if (dontShowAgain) {
+      localStorage.setItem('loopsoup_skip_delete_confirm', '1')
+    }
+    removeAllTracks()
+    setShowDeleteConfirm(false)
+  }, [removeAllTracks])
 
   const handleDownload = useCallback(() => {
     if (tracks.length === 0) return
@@ -242,7 +273,7 @@ export default function App() {
 
     const handleKeyDown = (e: KeyboardEvent) => {
       // Don't handle shortcuts when a modal is open (modals handle their own keys)
-      if (showDisclaimer || showShortcuts) return
+      if (showDisclaimer || showShortcuts || showDeleteConfirm) return
 
       if (e.code === 'Space') {
         e.preventDefault()
@@ -268,7 +299,8 @@ export default function App() {
       } else if (e.code === 'Enter') {
         e.preventDefault()
         undoLastTrack()
-      } else if (e.code === 'Delete') {
+      } else if (e.key === 'Delete' || e.key === 'Backspace') {
+        e.preventDefault()
         handleDelete()
       } else if (e.key === '?' || (e.shiftKey && e.key === '/')) {
         e.preventDefault()
@@ -317,7 +349,7 @@ export default function App() {
     }
 
     const handleKeyUp = (e: KeyboardEvent) => {
-      if (showDisclaimer || showShortcuts) return
+      if (showDisclaimer || showShortcuts || showDeleteConfirm) return
 
       if (e.code === 'Space') {
         e.preventDefault()
@@ -339,7 +371,7 @@ export default function App() {
       window.removeEventListener('keyup', handleKeyUp)
       if (spaceHoldInterval !== null) clearInterval(spaceHoldInterval)
     }
-  }, [handleToggleRec, handleDelete, undoLastTrack, removeAllTracks, showDisclaimer, showShortcuts])
+  }, [handleToggleRec, handleDelete, undoLastTrack, removeAllTracks, showDisclaimer, showShortcuts, showDeleteConfirm])
 
   // Amplitude getter for Visualizer
   const getAmplitude = useCallback(() => {
@@ -365,6 +397,12 @@ export default function App() {
 
       {showDisclaimer && <DisclaimerModal onClose={handleCloseDisclaimer} />}
       {showShortcuts && <KeyboardShortcuts onClose={() => setShowShortcuts(false)} />}
+      {showDeleteConfirm && (
+        <DeleteConfirmModal
+          onConfirm={handleConfirmDeleteAll}
+          onCancel={() => setShowDeleteConfirm(false)}
+        />
+      )}
     </>
   )
 }

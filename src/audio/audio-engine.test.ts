@@ -114,16 +114,17 @@ describe('AudioEngine', () => {
       await engine.init()
       const ctx = engine.getAudioContext()!
       const buffer = ctx.createBuffer(2, 4410, 44100)
-      const node = engine.playBuffer(buffer)
-      expect(node).toBeDefined()
+      const { source, gain } = engine.playBuffer(buffer)
+      expect(source).toBeDefined()
+      expect(gain).toBeDefined()
     })
 
     it('stops a source node', async () => {
       await engine.init()
       const ctx = engine.getAudioContext()!
       const buffer = ctx.createBuffer(2, 4410, 44100)
-      const node = engine.playBuffer(buffer)
-      expect(() => engine.stopSource(node)).not.toThrow()
+      const { source } = engine.playBuffer(buffer)
+      expect(() => engine.stopSource(source)).not.toThrow()
     })
   })
 

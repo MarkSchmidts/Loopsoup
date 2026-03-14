@@ -193,8 +193,8 @@ export class AudioEngine {
     return sum / (width * 256 - 1)
   }
 
-  /** Play an AudioBuffer as a looping source, connected to masterGain */
-  playBuffer(buffer: AudioBuffer, offset = 0): AudioBufferSourceNode {
+  /** Play an AudioBuffer as a looping source, connected to masterGain via its own gain node */
+  playBuffer(buffer: AudioBuffer, offset = 0): { source: AudioBufferSourceNode; gain: GainNode } {
     const source = this.ctx!.createBufferSource()
     source.buffer = buffer
     source.loop = true
@@ -204,7 +204,7 @@ export class AudioEngine {
     gainNode.connect(this.masterGain!)
 
     source.start(0, offset)
-    return source
+    return { source, gain: gainNode }
   }
 
   stopSource(source: AudioBufferSourceNode): void {

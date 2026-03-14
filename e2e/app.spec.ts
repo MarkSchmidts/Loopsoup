@@ -85,7 +85,7 @@ test.describe('Loopsoup App', () => {
     })
     const modal = page.locator('.modal-overlay')
     await expect(modal).toBeVisible()
-    await expect(page.locator('text=Keyboard Shortcuts')).toBeVisible()
+    await expect(page.getByRole('heading', { name: 'Keyboard Shortcuts' })).toBeVisible()
     await expect(page.locator('text=Toggle recording (tap)')).toBeVisible()
     // Dismiss with Escape
     await page.keyboard.press('Escape')

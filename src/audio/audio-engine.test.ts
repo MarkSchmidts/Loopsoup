@@ -170,4 +170,91 @@ describe('AudioEngine', () => {
       expect(engine.isInitialized()).toBe(false)
     })
   })
+
+  describe('StrictMode resilience (init/dispose/init)', () => {
+    it('works after dispose and reinit (simulates React StrictMode double-mount)', async () => {
+      // Mount 1: start init
+      const initPromise1 = engine.init()
+
+      // Unmount: dispose while init is pending
+      engine.dispose()
+
+      // Mount 2: reinit
+      await engine.init()
+
+      // Wait for first init to settle (it may have thrown internally)
+      await initPromise1.catch(() => {})
+
+      // Engine should be fully functional after the second init
+      expect(engine.isInitialized()).toBe(true)
+      expect(engine.hasMicAccess()).toBe(true)
+    })
+
+    it('can record after dispose and reinit', async () => {
+      await engine.init()
+      engine.dispose()
+      await engine.init()
+
+      let capturedL: Float32Array | null = null
+      engine.startRecording((left) => { capturedL = left })
+      expect(engine.isRecording()).toBe(true)
+
+      // Simulate audio data
+      const processor = engine.getProcessor() as unknown as {
+        simulateAudioData: (s: Float32Array) => void
+      }
+      processor.simulateAudioData(new Float32Array(4096).fill(0.5))
+
+      engine.stopRecording()
+      expect(capturedL).not.toBeNull()
+      expect(capturedL!.length).toBe(4096)
+    })
+
+    it('concurrent init does not corrupt engine state', async () => {
+      // Simulate StrictMode: init starts, dispose runs, init starts again
+      const init1 = engine.init()
+      engine.dispose()
+      const init2 = engine.init()
+
+      // Wait for both to settle
+      await init1.catch(() => {})
+      await init2
+
+      // The engine should be in a clean, working state
+      expect(engine.isInitialized()).toBe(true)
+      expect(engine.hasMicAccess()).toBe(true)
+
+      // Recording should work
+      engine.startRecording()
+      expect(engine.isRecording()).toBe(true)
+      engine.stopRecording()
+    })
+
+    it('old init completion does not corrupt state after dispose + reinit', async () => {
+      // This simulates what happens in React StrictMode:
+      // 1. Mount 1 effect starts init (promise stored)
+      // 2. StrictMode cleanup: dispose()
+      // 3. Mount 2 effect starts init
+      // 4. Mount 1's init promise resolves/rejects later
+      // After all settle, the engine must work correctly
+
+      const init1 = engine.init()
+      engine.dispose()
+      const init2 = engine.init()
+
+      // Let everything settle
+      await Promise.allSettled([init1, init2])
+
+      // Engine should work - the second init should win
+      expect(engine.isInitialized()).toBe(true)
+      expect(engine.hasMicAccess()).toBe(true)
+      expect(engine.getAudioContext()).not.toBeNull()
+
+      // Critical: startRecording must actually start
+      engine.startRecording()
+      expect(engine.isRecording()).toBe(true)
+      engine.stopRecording()
+      expect(engine.isRecording()).toBe(false)
+    })
+  })
 })

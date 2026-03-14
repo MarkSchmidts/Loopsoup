@@ -14,6 +14,7 @@ export class AudioEngine {
   private initialized = false
   private savedMasterVolume = 1
   private micAccessGranted = false
+  private initGeneration = 0
 
   // Recording state
   private processor: ScriptProcessorNode | null = null
@@ -23,6 +24,9 @@ export class AudioEngine {
   private totalRecordedLength = 0
 
   async init(): Promise<void> {
+    // Track generation to detect if dispose() was called during async gaps
+    const gen = ++this.initGeneration
+
     this.ctx = new AudioContext()
     this.masterGain = this.ctx.createGain()
     this.monitorGain = this.ctx.createGain()
@@ -38,20 +42,27 @@ export class AudioEngine {
 
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true })
+      // Bail out if dispose() was called while awaiting getUserMedia
+      if (this.initGeneration !== gen) return
       this.input = this.ctx.createMediaStreamSource(stream)
       this.input.connect(this.inputAnalyser)
       this.inputAnalyser.connect(this.monitorGain)
       this.micAccessGranted = true
     } catch {
+      if (this.initGeneration !== gen) return
       console.warn('Microphone access denied or unavailable')
       this.micAccessGranted = false
     }
 
+    // Bail out if dispose() was called
+    if (this.initGeneration !== gen) return
+
     // Resume AudioContext (may be suspended if created outside user gesture)
-    if (this.ctx.state === 'suspended') {
+    if (this.ctx && this.ctx.state === 'suspended') {
       await this.ctx.resume()
     }
 
+    if (this.initGeneration !== gen) return
     this.initialized = true
   }
 
@@ -220,6 +231,9 @@ export class AudioEngine {
   }
 
   dispose(): void {
+    // Increment generation so any in-flight init() calls bail out
+    this.initGeneration++
+
     if (this.recording) {
       this.recording = false
       if (this.processor) {

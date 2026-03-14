@@ -55,7 +55,11 @@ export default function App() {
   // Initialize audio engine
   useEffect(() => {
     ensureInit().catch(console.error)
-    return () => engineRef.current.dispose()
+    return () => {
+      engineRef.current.dispose()
+      // Reset so StrictMode remount creates a fresh init promise
+      initPromiseRef.current = null
+    }
   }, [ensureInit])
 
   // Sync master volume/mute to audio engine

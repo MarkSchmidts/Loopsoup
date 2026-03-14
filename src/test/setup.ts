@@ -81,6 +81,17 @@ class MockScriptProcessorNode {
   onaudioprocess: ((e: unknown) => void) | null = null
   connect(dest: unknown) { return dest }
   disconnect() {}
+
+  /** Simulate audio processing events for testing */
+  simulateAudioData(samples: Float32Array) {
+    if (this.onaudioprocess) {
+      this.onaudioprocess({
+        inputBuffer: {
+          getChannelData: () => samples,
+        },
+      })
+    }
+  }
 }
 
 class MockAudioContext {

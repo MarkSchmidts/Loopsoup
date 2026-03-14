@@ -179,13 +179,11 @@ export default function App() {
 
   const handleDelete = useCallback(() => {
     if (selectedTrack === -1) {
-      if (tracks.length > 0 && window.confirm('Currently all tracks are selected. Do you want to delete them all?')) {
-        removeAllTracks()
-      }
+      removeAllTracks()
     } else {
       removeTrack(selectedTrack)
     }
-  }, [selectedTrack, tracks.length, removeAllTracks, removeTrack])
+  }, [selectedTrack, removeAllTracks, removeTrack])
 
   const handleDownload = useCallback(() => {
     if (tracks.length === 0) return
@@ -268,13 +266,21 @@ export default function App() {
       } else if (e.code === 'ArrowRight') {
         e.preventDefault()
         const state = useLooperStore.getState()
-        const newVol = Math.min(100, state.masterVolume + VOLUME_STEP)
-        state.setMasterVolume(newVol)
+        if (state.selectedTrack === -1) {
+          state.setMasterVolume(Math.min(100, state.masterVolume + VOLUME_STEP))
+        } else {
+          const track = state.tracks[state.selectedTrack]
+          if (track) state.setTrackVolume(state.selectedTrack, Math.min(100, track.volume + VOLUME_STEP))
+        }
       } else if (e.code === 'ArrowLeft') {
         e.preventDefault()
         const state = useLooperStore.getState()
-        const newVol = Math.max(0, state.masterVolume - VOLUME_STEP)
-        state.setMasterVolume(newVol)
+        if (state.selectedTrack === -1) {
+          state.setMasterVolume(Math.max(0, state.masterVolume - VOLUME_STEP))
+        } else {
+          const track = state.tracks[state.selectedTrack]
+          if (track) state.setTrackVolume(state.selectedTrack, Math.max(0, track.volume - VOLUME_STEP))
+        }
       } else if (e.code === 'ArrowUp') {
         e.preventDefault()
         const state = useLooperStore.getState()
@@ -286,7 +292,7 @@ export default function App() {
         const maxTrack = state.tracks.length - 1
         const newTrack = Math.min(maxTrack, state.selectedTrack + 1)
         state.selectTrack(newTrack)
-      } else if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
+      } else if (e.key === 'm' || e.key === 'M' || e.code === 'ControlLeft' || e.code === 'ControlRight') {
         e.preventDefault()
         const state = useLooperStore.getState()
         if (state.selectedTrack === -1) {

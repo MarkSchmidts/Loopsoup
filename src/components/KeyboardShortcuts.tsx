@@ -12,7 +12,7 @@ const SHORTCUTS = [
   { key: '\u2190', description: 'Decrease volume' },
   { key: '\u2191', description: 'Select previous track' },
   { key: '\u2193', description: 'Select next track' },
-  { key: 'Ctrl', description: 'Toggle mute on selected track' },
+  { key: 'M', description: 'Toggle mute on selected track' },
   { key: 'Shift+C', description: 'Toggle calibration mode' },
   { key: '?', description: 'Show keyboard shortcuts' },
 ]

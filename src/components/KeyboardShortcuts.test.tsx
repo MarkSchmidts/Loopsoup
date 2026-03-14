@@ -34,9 +34,9 @@ describe('KeyboardShortcuts', () => {
     expect(screen.getByText('Select next track')).toBeDefined()
   })
 
-  it('lists Ctrl shortcut for mute', () => {
+  it('lists M shortcut for mute', () => {
     render(<KeyboardShortcuts onClose={() => {}} />)
-    expect(screen.getByText('Ctrl')).toBeDefined()
+    expect(screen.getByText('M')).toBeDefined()
     expect(screen.getByText('Toggle mute on selected track')).toBeDefined()
   })
 

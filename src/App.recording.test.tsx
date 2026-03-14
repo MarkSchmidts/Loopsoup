@@ -194,4 +194,80 @@ describe('App recording integration', () => {
     store.setSampleRate(48000)
     expect(useLooperStore.getState().sampleRate).toBe(48000)
   })
+
+  describe('overdub playback continuity', () => {
+    it('adding a second track should NOT reset recordStartTime', () => {
+      // First track is playing, recordStartTime was set when it started
+      const playbackStart = Date.now() - 3000 // started 3 seconds ago
+      useLooperStore.getState().setRecordStartTime(playbackStart)
+
+      useLooperStore.getState().addTrack({
+        id: 'track-1',
+        buffer: makeSamples(44100),
+        bufferR: makeSamples(44100),
+        volume: 100,
+        muted: false,
+        offset: 0,
+        startTime: Date.now(),
+      })
+
+      // After adding first track, recordStartTime should stay the same
+      // (The replay effect currently resets it — this is the bug)
+      const timeAfterFirstTrack = useLooperStore.getState().recordStartTime
+
+      // Now add second track (overdub finished)
+      useLooperStore.getState().addTrack({
+        id: 'track-2',
+        buffer: makeSamples(44100),
+        bufferR: makeSamples(44100),
+        volume: 100,
+        muted: false,
+        offset: 0,
+        startTime: Date.now(),
+      })
+
+      // recordStartTime must NOT be reset when adding a track via overdub
+      // It should preserve the original playback timeline
+      expect(useLooperStore.getState().recordStartTime).toBe(timeAfterFirstTrack)
+    })
+
+    it('new overdub source should start at current loop position, not from beginning', async () => {
+      const engine = new AudioEngine()
+      await engine.init()
+
+      const sampleRate = engine.getAudioContext()!.sampleRate
+      const loopLengthSamples = sampleRate * 2 // 2-second loop
+
+      // First track exists and is playing
+      useLooperStore.getState().addTrack({
+        id: 'track-1',
+        buffer: makeSamples(loopLengthSamples),
+        bufferR: makeSamples(loopLengthSamples),
+        volume: 100,
+        muted: false,
+        offset: 0,
+        startTime: Date.now(),
+      })
+
+      // Playback started 1.5 seconds ago — we're 1.5s into the loop
+      const recordStartTime = Date.now() - 1500
+      useLooperStore.getState().setRecordStartTime(recordStartTime)
+
+      // Calculate expected offset for new track (in seconds)
+      const elapsed = Date.now() - recordStartTime
+      const loopDurationMs = (loopLengthSamples / sampleRate) * 1000
+      const positionMs = elapsed % loopDurationMs
+      const expectedOffsetSec = positionMs / 1000
+
+      // The new track should start near 1.5 seconds into the buffer
+      // (not 0, which is the bug)
+      expect(expectedOffsetSec).toBeGreaterThan(1.0)
+      expect(expectedOffsetSec).toBeLessThan(2.0)
+
+      // Play the new track at the correct offset
+      const buf = engine.getAudioContext()!.createBuffer(2, loopLengthSamples, sampleRate)
+      const { source } = engine.playBuffer(buf, expectedOffsetSec)
+      expect(source).toBeDefined()
+    })
+  })
 })

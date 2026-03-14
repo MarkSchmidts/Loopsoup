@@ -20,6 +20,7 @@ export default function App() {
   const engineRef = useRef<AudioEngine>(getEngine())
   const sourcesRef = useRef<AudioBufferSourceNode[]>([])
   const trackGainsRef = useRef<GainNode[]>([])
+  const prevTrackIdsRef = useRef<string[]>([])
 
   const tracks = useLooperStore((s) => s.tracks)
   const isRecording = useLooperStore((s) => s.isRecording)
@@ -73,37 +74,69 @@ export default function App() {
     }
   }, [masterVolume, masterMuted])
 
-  // Replay all tracks when tracks change
+  // Replay tracks when tracks change — incremental: only rebuild what changed
   useEffect(() => {
     const engine = engineRef.current
     if (!engine.isInitialized()) return
 
-    // Stop old sources
-    sourcesRef.current.forEach((s) => {
-      try { s.stop() } catch { /* ignore */ }
-    })
-    sourcesRef.current = []
-    trackGainsRef.current = []
+    const prevIds = prevTrackIdsRef.current
+    const newIds = tracks.map((t) => t.id)
 
-    // Start new sources
-    tracks.forEach((track) => {
-      if (track.buffer.length > 0) {
-        const ctx = engine.getAudioContext()!
-        const buf = ctx.createBuffer(2, track.buffer.length, ctx.sampleRate)
-        buf.copyToChannel(new Float32Array(track.buffer), 0)
-        buf.copyToChannel(new Float32Array(track.bufferR), 1)
-        const { source, gain } = engine.playBuffer(buf, track.offset)
-        // Apply current track volume/mute state
-        gain.gain.value = track.muted ? 0 : track.volume / 100
-        sourcesRef.current.push(source)
-        trackGainsRef.current.push(gain)
+    // Detect if this is purely an append (overdub finished)
+    const isAppend =
+      newIds.length > prevIds.length &&
+      prevIds.every((id, i) => id === newIds[i])
+
+    if (isAppend && sourcesRef.current.length === prevIds.length) {
+      // Only start sources for the newly added tracks at the current loop position
+      const ctx = engine.getAudioContext()!
+      const state = useLooperStore.getState()
+      const firstTrack = tracks[0]
+      const loopDurationSec = firstTrack.buffer.length / ctx.sampleRate
+      const elapsedSec = (Date.now() - state.recordStartTime) / 1000
+      const offsetSec = elapsedSec % loopDurationSec
+
+      for (let i = prevIds.length; i < tracks.length; i++) {
+        const track = tracks[i]
+        if (track.buffer.length > 0) {
+          const buf = ctx.createBuffer(2, track.buffer.length, ctx.sampleRate)
+          buf.copyToChannel(new Float32Array(track.buffer), 0)
+          buf.copyToChannel(new Float32Array(track.bufferR), 1)
+          const { source, gain } = engine.playBuffer(buf, offsetSec)
+          gain.gain.value = track.muted ? 0 : track.volume / 100
+          sourcesRef.current.push(source)
+          trackGainsRef.current.push(gain)
+        }
       }
-    })
+      // Do NOT reset recordStartTime — playback continues uninterrupted
+    } else {
+      // Full rebuild: tracks were removed, reordered, or this is the first load
+      sourcesRef.current.forEach((s) => {
+        try { s.stop() } catch { /* ignore */ }
+      })
+      sourcesRef.current = []
+      trackGainsRef.current = []
 
-    // Sync playback indicator: mark when this set of tracks started playing
-    if (tracks.length > 0) {
-      useLooperStore.getState().setRecordStartTime(Date.now())
+      tracks.forEach((track) => {
+        if (track.buffer.length > 0) {
+          const ctx = engine.getAudioContext()!
+          const buf = ctx.createBuffer(2, track.buffer.length, ctx.sampleRate)
+          buf.copyToChannel(new Float32Array(track.buffer), 0)
+          buf.copyToChannel(new Float32Array(track.bufferR), 1)
+          const { source, gain } = engine.playBuffer(buf, track.offset)
+          gain.gain.value = track.muted ? 0 : track.volume / 100
+          sourcesRef.current.push(source)
+          trackGainsRef.current.push(gain)
+        }
+      })
+
+      // Sync playback indicator: mark when this set of tracks started playing
+      if (tracks.length > 0) {
+        useLooperStore.getState().setRecordStartTime(Date.now())
+      }
     }
+
+    prevTrackIdsRef.current = newIds
   }, [tracks])
 
   // Sync per-track volume/mute to audio gain nodes

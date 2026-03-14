@@ -223,6 +223,16 @@ export default function App() {
     setShowDisclaimer(false)
   }, [])
 
+  const handleTrackClick = useCallback((trackIndex: number) => {
+    const state = useLooperStore.getState()
+    // Toggle: if already selected, go back to ALL; otherwise select the track
+    if (state.selectedTrack === trackIndex) {
+      state.selectTrack(-1)
+    } else {
+      state.selectTrack(trackIndex)
+    }
+  }, [])
+
   // Keyboard shortcuts (matches legacy uiController hotkeys)
   useEffect(() => {
     const VOLUME_STEP = 4
@@ -340,8 +350,12 @@ export default function App() {
     <>
       <img className="loopsoup-logo" alt="loopsoup logo" src="/logo.png" />
 
-      <div className="visu" onClick={handleToggleRec}>
-        <Visualizer getAmplitude={getAmplitude} />
+      <div className="visu">
+        <Visualizer
+          getAmplitude={getAmplitude}
+          onRecClick={handleToggleRec}
+          onTrackClick={handleTrackClick}
+        />
       </div>
 
       <Controls

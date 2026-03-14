@@ -5,9 +5,11 @@ const TRACK_COLORS = ['#6AB26D', '#4D9CB6', '#E95013', '#A600EB', '#FF002D']
 
 interface VisualizerProps {
   getAmplitude?: () => number
+  onRecClick?: () => void
+  onTrackClick?: (trackIndex: number) => void
 }
 
-export function Visualizer({ getAmplitude }: VisualizerProps) {
+export function Visualizer({ getAmplitude, onRecClick, onTrackClick }: VisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animRef = useRef<number>(0)
 
@@ -159,11 +161,43 @@ export function Visualizer({ getAmplitude }: VisualizerProps) {
     }
   }, [draw])
 
+  const handleClick = useCallback((e: React.MouseEvent<HTMLCanvasElement>) => {
+    const canvas = canvasRef.current
+    if (!canvas) return
+
+    const rect = canvas.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    const w = rect.width
+    const h = rect.height
+    const cx = w / 2
+    const cy = h / 2
+    const innerRadius = Math.min(w, h) / 8
+    const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2)
+
+    // Click on center REC/STOP button
+    if (dist <= innerRadius) {
+      onRecClick?.()
+      return
+    }
+
+    // Click on a track ring (40px wide bands)
+    const state = useLooperStore.getState()
+    for (let i = state.tracks.length - 1; i >= 0; i--) {
+      const ringRadius = innerRadius + 30 + 40 * i
+      if (Math.abs(dist - ringRadius) < 20) {
+        onTrackClick?.(i)
+        return
+      }
+    }
+  }, [onRecClick, onTrackClick])
+
   return (
     <canvas
       ref={canvasRef}
       data-testid="visualizer-canvas"
       className="visualizer"
+      onClick={handleClick}
     />
   )
 }

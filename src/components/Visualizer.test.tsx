@@ -18,4 +18,10 @@ describe('Visualizer', () => {
     const canvas = screen.getByTestId('visualizer-canvas')
     expect(canvas.tagName).toBe('CANVAS')
   })
+
+  it('accepts getAmplitude prop for rec button pulsing', () => {
+    const getAmplitude = () => 0.5
+    // Should not throw - Visualizer accepts the prop
+    expect(() => render(<Visualizer getAmplitude={getAmplitude} />)).not.toThrow()
+  })
 })

@@ -3,7 +3,11 @@ import { useLooperStore } from '../store/looper-store'
 
 const TRACK_COLORS = ['#6AB26D', '#4D9CB6', '#E95013', '#A600EB', '#FF002D']
 
-export function Visualizer() {
+interface VisualizerProps {
+  getAmplitude?: () => number
+}
+
+export function Visualizer({ getAmplitude }: VisualizerProps) {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const animRef = useRef<number>(0)
 
@@ -74,8 +78,16 @@ export function Visualizer() {
       ctx.shadowBlur = 0
     })
 
-    // Draw REC button
-    const recRadius = innerRadius - 10
+    // Draw REC button - pulse with amplitude when recording (matches legacy recButton.update)
+    let scale = 1
+    if (isRecording && getAmplitude) {
+      const amp = getAmplitude()
+      scale = 0.4 + amp / 1.8
+      scale = Math.min(scale, 1)
+      scale = Math.max(scale, 0.4)
+    }
+
+    const recRadius = (innerRadius - 10) * scale
     ctx.beginPath()
     ctx.arc(cx, cy, recRadius, 0, Math.PI * 2)
     ctx.fillStyle = 'darkred'
@@ -85,11 +97,15 @@ export function Visualizer() {
     ctx.shadowBlur = 0
 
     // REC/STOP text
+    const fontSize = Math.floor(recRadius / 2)
     ctx.fillStyle = 'white'
-    ctx.font = `${Math.floor(recRadius / 2)}px Verdana`
+    ctx.font = `500 ${fontSize}px Verdana`
     ctx.textAlign = 'center'
     ctx.textBaseline = 'middle'
+    ctx.shadowColor = 'black'
+    ctx.shadowBlur = 3
     ctx.fillText(isRecording ? 'STOP' : 'REC', cx, cy)
+    ctx.shadowBlur = 0
 
     // Loop progress marker
     if (tracks.length > 0) {
@@ -112,7 +128,7 @@ export function Visualizer() {
     }
 
     animRef.current = requestAnimationFrame(draw)
-  }, [tracks, isRecording, recordStartTime, selectedTrack])
+  }, [tracks, isRecording, recordStartTime, selectedTrack, getAmplitude])
 
   useEffect(() => {
     const canvas = canvasRef.current

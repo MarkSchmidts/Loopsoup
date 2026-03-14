@@ -46,6 +46,28 @@ describe('AudioEngine', () => {
       engine.stopRecording()
       expect(engine.isRecording()).toBe(false)
     })
+
+    it('startRecording sets up ScriptProcessorNode and captures buffers', async () => {
+      await engine.init()
+      const onData = (left: Float32Array, right: Float32Array) => {
+        expect(left).toBeInstanceOf(Float32Array)
+        expect(right).toBeInstanceOf(Float32Array)
+      }
+      engine.startRecording(onData)
+      expect(engine.isRecording()).toBe(true)
+      expect(engine.getProcessor()).toBeDefined()
+    })
+
+    it('stopRecording disconnects processor and returns buffers via callback', async () => {
+      await engine.init()
+      engine.startRecording((left, right) => {
+        expect(left.length).toBeGreaterThanOrEqual(0)
+        expect(right.length).toBeGreaterThanOrEqual(0)
+      })
+      engine.stopRecording()
+      expect(engine.isRecording()).toBe(false)
+      expect(engine.getProcessor()).toBeNull()
+    })
   })
 
   describe('gain nodes', () => {

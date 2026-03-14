@@ -21,7 +21,6 @@ export default function App() {
   const isRecording = useLooperStore((s) => s.isRecording)
   const masterVolume = useLooperStore((s) => s.masterVolume)
   const masterMuted = useLooperStore((s) => s.masterMuted)
-  const latencyMs = useLooperStore((s) => s.latencyMs)
   const selectedTrack = useLooperStore((s) => s.selectedTrack)
   const addTrack = useLooperStore((s) => s.addTrack)
   const setRecording = useLooperStore((s) => s.setRecording)
@@ -82,97 +81,94 @@ export default function App() {
     })
   }, [tracks])
 
+  // Auto-stop recording when first loop length is reached
+  useEffect(() => {
+    if (!isRecording || tracks.length === 0) return
+
+    const engine = engineRef.current
+    const firstTrackLength = tracks[0].buffer.length
+    if (firstTrackLength === 0) return
+
+    const interval = setInterval(() => {
+      if (engine.getRecordedLength() >= firstTrackLength) {
+        setRecording(false)
+      }
+    }, 100)
+
+    return () => clearInterval(interval)
+  }, [isRecording, tracks, setRecording])
+
+  // When isRecording goes from true -> false (e.g. auto-stop), stop engine
+  const wasRecordingRef = useRef(false)
+  useEffect(() => {
+    const engine = engineRef.current
+    if (wasRecordingRef.current && !isRecording && engine.isRecording()) {
+      engine.stopRecording()
+    }
+    wasRecordingRef.current = isRecording
+  }, [isRecording, tracks])
+
   const handleToggleRec = useCallback(async () => {
     await ensureInit()
     const engine = engineRef.current
 
     if (isRecording) {
+      // Stop recording - callback from startRecording will fire with buffers
+      engine.stopRecording()
       setRecording(false)
     } else {
+      // Start recording
       setRecording(true)
       setRecordStartTime(Date.now())
 
-      const ctx = engine.getAudioContext()!
-      const analyser = engine.getAnalyser()
-      if (!analyser) return
-
-      const processor = ctx.createScriptProcessor(4096, 2, 2)
-      const buffersL: Float32Array[] = []
-      const buffersR: Float32Array[] = []
-      let totalLength = 0
-
       const firstTrackLength = tracks.length > 0 ? tracks[0].buffer.length : 0
 
-      processor.onaudioprocess = (e: AudioProcessEvent) => {
-        if (!useLooperStore.getState().isRecording) {
-          processor.disconnect()
-          analyser.disconnect(processor)
+      engine.startRecording((rawL, rawR) => {
+        if (rawL.length === 0) return
 
-          const finalL = new Float32Array(totalLength)
-          const finalR = new Float32Array(totalLength)
-          let offset = 0
-          for (const b of buffersL) {
-            finalL.set(b, offset)
-            offset += b.length
-          }
-          offset = 0
-          for (const b of buffersR) {
-            finalR.set(b, offset)
-            offset += b.length
-          }
+        const ctx = engine.getAudioContext()
+        const sampleRate = ctx?.sampleRate ?? 44100
 
-          let processedL: Float32Array = finalL
-          let processedR: Float32Array = finalR
-          if (firstTrackLength > 0) {
-            if (totalLength > firstTrackLength) {
-              processedL = finalL.slice(0, firstTrackLength)
-              processedR = finalR.slice(0, firstTrackLength)
-            } else if (totalLength < firstTrackLength) {
-              processedL = mergeFloat32Arrays(finalL, new Float32Array(firstTrackLength - totalLength))
-              processedR = mergeFloat32Arrays(finalR, new Float32Array(firstTrackLength - totalLength))
-            }
+        // Trim or pad to match first track
+        let processedL: Float32Array = rawL
+        let processedR: Float32Array = rawR
+        if (firstTrackLength > 0) {
+          if (rawL.length > firstTrackLength) {
+            processedL = rawL.slice(0, firstTrackLength)
+            processedR = rawR.slice(0, firstTrackLength)
+          } else if (rawL.length < firstTrackLength) {
+            processedL = mergeFloat32Arrays(rawL, new Float32Array(firstTrackLength - rawL.length))
+            processedR = mergeFloat32Arrays(rawR, new Float32Array(firstTrackLength - rawR.length))
           }
-
-          const latencyFrames = Math.floor(ctx.sampleRate * (latencyMs / 1000))
-          if (latencyFrames > 0 && processedL.length > latencyFrames) {
-            processedL = mergeFloat32Arrays(
-              processedL.slice(latencyFrames),
-              processedL.slice(processedL.length - latencyFrames)
-            )
-            processedR = mergeFloat32Arrays(
-              processedR.slice(latencyFrames),
-              processedR.slice(processedR.length - latencyFrames)
-            )
-          }
-
-          const track: Track = {
-            id: `track-${Date.now()}`,
-            buffer: processedL,
-            bufferR: processedR,
-            volume: 100,
-            muted: false,
-            offset: 0,
-            startTime: Date.now(),
-          }
-          addTrack(track)
-          return
         }
 
-        const inputL = new Float32Array(e.inputBuffer.getChannelData(0))
-        const inputR = new Float32Array(e.inputBuffer.getChannelData(1))
-        buffersL.push(inputL)
-        buffersR.push(inputR)
-        totalLength += inputL.length
-
-        if (firstTrackLength > 0 && totalLength >= firstTrackLength) {
-          useLooperStore.getState().setRecording(false)
+        // Latency compensation
+        const currentLatencyMs = useLooperStore.getState().latencyMs
+        const latencyFrames = Math.floor(sampleRate * (currentLatencyMs / 1000))
+        if (latencyFrames > 0 && processedL.length > latencyFrames) {
+          processedL = mergeFloat32Arrays(
+            processedL.slice(latencyFrames),
+            processedL.slice(processedL.length - latencyFrames)
+          )
+          processedR = mergeFloat32Arrays(
+            processedR.slice(latencyFrames),
+            processedR.slice(processedR.length - latencyFrames)
+          )
         }
-      }
 
-      analyser.connect(processor)
-      processor.connect(ctx.destination)
+        const track: Track = {
+          id: `track-${Date.now()}`,
+          buffer: processedL,
+          bufferR: processedR,
+          volume: 100,
+          muted: false,
+          offset: 0,
+          startTime: Date.now(),
+        }
+        addTrack(track)
+      })
     }
-  }, [isRecording, tracks, latencyMs, addTrack, setRecording, setRecordStartTime, ensureInit])
+  }, [isRecording, tracks, addTrack, setRecording, setRecordStartTime, ensureInit])
 
   const handleDelete = useCallback(() => {
     if (selectedTrack === -1) {
@@ -235,12 +231,17 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKey)
   }, [handleToggleRec, handleDelete, undoLastTrack])
 
+  // Amplitude getter for Visualizer
+  const getAmplitude = useCallback(() => {
+    return engineRef.current.getInputAmplitude()
+  }, [])
+
   return (
     <>
       <img className="loopsoup-logo" alt="loopsoup logo" src="/logo.png" />
 
       <div className="visu" onClick={handleToggleRec}>
-        <Visualizer />
+        <Visualizer getAmplitude={getAmplitude} />
       </div>
 
       <Controls
@@ -249,9 +250,4 @@ export default function App() {
       />
     </>
   )
-}
-
-interface AudioProcessEvent extends Event {
-  inputBuffer: AudioBuffer
-  outputBuffer: AudioBuffer
 }

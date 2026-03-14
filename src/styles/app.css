@@ -146,6 +146,108 @@ body {
   margin-right: 8px;
 }
 
+/* Icon buttons - display flex for SVG alignment */
+.controls .icon-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Modal overlay */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.modal-content {
+  background: #222;
+  color: #eee;
+  border-radius: 8px;
+  padding: 24px 32px;
+  max-width: 520px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal-content h3 {
+  margin-bottom: 16px;
+  font-size: 1.4em;
+}
+
+.modal-content p {
+  margin-bottom: 12px;
+  line-height: 1.5;
+}
+
+.modal-content ul {
+  padding-left: 20px;
+  margin-bottom: 16px;
+}
+
+.modal-content li {
+  margin-bottom: 8px;
+  line-height: 1.5;
+}
+
+.modal-content a {
+  color: #6AB26D;
+}
+
+.modal-footer {
+  text-align: right;
+  margin-top: 16px;
+}
+
+.modal-btn {
+  background: #6AB26D;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 24px;
+  font-size: 1em;
+  cursor: pointer;
+  font-weight: bold;
+}
+
+.modal-btn:hover {
+  background: #5a9e5d;
+}
+
+/* Keyboard shortcuts table */
+.shortcuts-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-bottom: 8px;
+}
+
+.shortcuts-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid #444;
+}
+
+.shortcuts-table td:first-child {
+  width: 100px;
+  text-align: center;
+}
+
+kbd {
+  background: #333;
+  border: 1px solid #555;
+  border-radius: 4px;
+  padding: 2px 8px;
+  font-family: monospace;
+  font-size: 0.95em;
+}
+
 /* Responsive - matches legacy */
 @media (max-width: 280px) {
   body { font-size: 8px; }

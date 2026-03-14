@@ -1,6 +1,8 @@
-import { useEffect, useRef, useCallback } from 'react'
+import { useEffect, useRef, useCallback, useState } from 'react'
 import { Controls } from './components/Controls'
 import { Visualizer } from './components/Visualizer'
+import { DisclaimerModal } from './components/DisclaimerModal'
+import { KeyboardShortcuts } from './components/KeyboardShortcuts'
 import { AudioEngine } from './audio/audio-engine'
 import { useLooperStore, type Track } from './store/looper-store'
 import { mergeFloat32Arrays, createWavBlob, getGermanDateFormat } from './utils/audio-utils'
@@ -28,6 +30,11 @@ export default function App() {
   const removeTrack = useLooperStore((s) => s.removeTrack)
   const removeAllTracks = useLooperStore((s) => s.removeAllTracks)
   const undoLastTrack = useLooperStore((s) => s.undoLastTrack)
+
+  const [showDisclaimer, setShowDisclaimer] = useState(() => {
+    return !localStorage.getItem('loopsoup_disclaimer_seen')
+  })
+  const [showShortcuts, setShowShortcuts] = useState(false)
 
   const initPromiseRef = useRef<Promise<void> | null>(null)
 
@@ -213,9 +220,17 @@ export default function App() {
     URL.revokeObjectURL(url)
   }, [tracks, selectedTrack])
 
+  const handleCloseDisclaimer = useCallback(() => {
+    localStorage.setItem('loopsoup_disclaimer_seen', '1')
+    setShowDisclaimer(false)
+  }, [])
+
   // Keyboard shortcuts
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
+      // Don't handle shortcuts when a modal is open (modals handle their own keys)
+      if (showDisclaimer || showShortcuts) return
+
       if (e.code === 'Space') {
         e.preventDefault()
         handleToggleRec()
@@ -224,12 +239,15 @@ export default function App() {
         undoLastTrack()
       } else if (e.code === 'Delete') {
         handleDelete()
+      } else if (e.key === '?') {
+        e.preventDefault()
+        setShowShortcuts(true)
       }
     }
 
     window.addEventListener('keydown', handleKey)
     return () => window.removeEventListener('keydown', handleKey)
-  }, [handleToggleRec, handleDelete, undoLastTrack])
+  }, [handleToggleRec, handleDelete, undoLastTrack, showDisclaimer, showShortcuts])
 
   // Amplitude getter for Visualizer
   const getAmplitude = useCallback(() => {
@@ -248,6 +266,9 @@ export default function App() {
         onDownload={handleDownload}
         onDelete={handleDelete}
       />
+
+      {showDisclaimer && <DisclaimerModal onClose={handleCloseDisclaimer} />}
+      {showShortcuts && <KeyboardShortcuts onClose={() => setShowShortcuts(false)} />}
     </>
   )
 }

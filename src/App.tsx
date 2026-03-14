@@ -30,12 +30,22 @@ export default function App() {
   const removeAllTracks = useLooperStore((s) => s.removeAllTracks)
   const undoLastTrack = useLooperStore((s) => s.undoLastTrack)
 
+  const initPromiseRef = useRef<Promise<void> | null>(null)
+
+  const ensureInit = useCallback(async () => {
+    const engine = engineRef.current
+    if (engine.isInitialized()) return
+    if (!initPromiseRef.current) {
+      initPromiseRef.current = engine.init()
+    }
+    await initPromiseRef.current
+  }, [])
+
   // Initialize audio engine
   useEffect(() => {
-    const engine = engineRef.current
-    engine.init().catch(console.error)
-    return () => engine.dispose()
-  }, [])
+    ensureInit().catch(console.error)
+    return () => engineRef.current.dispose()
+  }, [ensureInit])
 
   // Sync master volume/mute to audio engine
   useEffect(() => {
@@ -72,9 +82,9 @@ export default function App() {
     })
   }, [tracks])
 
-  const handleToggleRec = useCallback(() => {
+  const handleToggleRec = useCallback(async () => {
+    await ensureInit()
     const engine = engineRef.current
-    if (!engine.isInitialized()) return
 
     if (isRecording) {
       setRecording(false)
@@ -162,7 +172,7 @@ export default function App() {
       analyser.connect(processor)
       processor.connect(ctx.destination)
     }
-  }, [isRecording, tracks, latencyMs, addTrack, setRecording, setRecordStartTime])
+  }, [isRecording, tracks, latencyMs, addTrack, setRecording, setRecordStartTime, ensureInit])
 
   const handleDelete = useCallback(() => {
     if (selectedTrack === -1) {

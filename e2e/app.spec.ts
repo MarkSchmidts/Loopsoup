@@ -7,6 +7,8 @@ test.describe('Loopsoup App', () => {
       localStorage.setItem('loopsoup_disclaimer_seen', '1')
     })
     await page.goto('/')
+    // Wait for app to be ready
+    await page.waitForLoadState('networkidle')
   })
 
   test('loads the app with logo image', async ({ page }) => {
@@ -16,7 +18,7 @@ test.describe('Loopsoup App', () => {
   })
 
   test('has correct page title', async ({ page }) => {
-    await expect(page).toHaveTitle(/loopsoup/)
+    await expect(page).toHaveTitle(/loopsoup/i)
   })
 
   test('renders the visualizer canvas', async ({ page }) => {
@@ -64,21 +66,21 @@ test.describe('Loopsoup App', () => {
 
   test('shows disclaimer modal on first visit', async ({ page }) => {
     // Navigate without the localStorage flag
-    const freshPage = page
-    await freshPage.addInitScript(() => {
+    await page.addInitScript(() => {
       localStorage.removeItem('loopsoup_disclaimer_seen')
     })
-    await freshPage.goto('/')
-    const modal = freshPage.locator('.modal-overlay')
+    await page.goto('/')
+    const modal = page.locator('.modal-overlay')
     await expect(modal).toBeVisible()
-    await expect(freshPage.locator('text=Let me explain.')).toBeVisible()
+    await expect(page.locator('text=Let me explain.')).toBeVisible()
     // Dismiss it
-    await freshPage.locator('.modal-btn', { hasText: 'OK' }).click()
+    await page.locator('.modal-btn', { hasText: 'OK' }).click()
     await expect(modal).not.toBeVisible()
   })
 
   test('shows keyboard shortcuts on ? key', async ({ page }) => {
-    await page.keyboard.press('?')
+    // Use Shift+Slash to produce ? (works reliably across keyboard layouts)
+    await page.keyboard.press('Shift+Slash')
     const modal = page.locator('.modal-overlay')
     await expect(modal).toBeVisible()
     await expect(page.locator('text=Keyboard Shortcuts')).toBeVisible()

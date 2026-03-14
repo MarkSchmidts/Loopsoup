@@ -107,7 +107,7 @@ export function Visualizer({ getAmplitude }: VisualizerProps) {
     ctx.fillText(isRecording ? 'STOP' : 'REC', cx, cy)
     ctx.shadowBlur = 0
 
-    // Loop progress marker
+    // Loop progress marker - positioned well outside the outermost track ring
     if (tracks.length > 0) {
       const firstTrack = tracks[0]
       const duration = firstTrack.buffer.length / 44100 * 1000 // ms
@@ -115,13 +115,21 @@ export function Visualizer({ getAmplitude }: VisualizerProps) {
         const elapsed = Date.now() - recordStartTime
         const progress = (elapsed / duration) % 1
         const angle = progress * Math.PI * 2 - Math.PI / 2
-        const outerRadius = innerRadius + 30 + 40 * (tracks.length - 1) + 20
+        const outerRadius = innerRadius + 30 + 40 * (tracks.length - 1) + 50
         const mx = cx + outerRadius * Math.cos(angle)
         const my = cy + outerRadius * Math.sin(angle)
 
+        // Adaptive color: detect background luminance from computed body style
+        const bgColor = getComputedStyle(document.body).backgroundColor
+        const rgbMatch = bgColor.match(/\d+/g)
+        const bgLuminance = rgbMatch
+          ? (Number(rgbMatch[0]) * 0.299 + Number(rgbMatch[1]) * 0.587 + Number(rgbMatch[2]) * 0.114)
+          : 0
+        const markerColor = bgLuminance > 128 ? 'black' : 'white'
+
         ctx.beginPath()
         ctx.arc(mx, my, 5, 0, Math.PI * 2)
-        ctx.strokeStyle = 'black'
+        ctx.strokeStyle = markerColor
         ctx.lineWidth = 3
         ctx.stroke()
       }

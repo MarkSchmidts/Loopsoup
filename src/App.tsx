@@ -225,8 +225,10 @@ export default function App() {
     setShowDisclaimer(false)
   }, [])
 
-  // Keyboard shortcuts
+  // Keyboard shortcuts (matches legacy uiController hotkeys)
   useEffect(() => {
+    const VOLUME_STEP = 4
+
     const handleKey = (e: KeyboardEvent) => {
       // Don't handle shortcuts when a modal is open (modals handle their own keys)
       if (showDisclaimer || showShortcuts) return
@@ -239,9 +241,41 @@ export default function App() {
         undoLastTrack()
       } else if (e.code === 'Delete') {
         handleDelete()
-      } else if (e.key === '?') {
+      } else if (e.key === '?' || (e.shiftKey && e.key === '/')) {
         e.preventDefault()
         setShowShortcuts(true)
+      } else if (e.code === 'ArrowRight') {
+        e.preventDefault()
+        const state = useLooperStore.getState()
+        const newVol = Math.min(100, state.masterVolume + VOLUME_STEP)
+        state.setMasterVolume(newVol)
+      } else if (e.code === 'ArrowLeft') {
+        e.preventDefault()
+        const state = useLooperStore.getState()
+        const newVol = Math.max(0, state.masterVolume - VOLUME_STEP)
+        state.setMasterVolume(newVol)
+      } else if (e.code === 'ArrowUp') {
+        e.preventDefault()
+        const state = useLooperStore.getState()
+        const newTrack = Math.max(-1, state.selectedTrack - 1)
+        state.selectTrack(newTrack)
+      } else if (e.code === 'ArrowDown') {
+        e.preventDefault()
+        const state = useLooperStore.getState()
+        const maxTrack = state.tracks.length - 1
+        const newTrack = Math.min(maxTrack, state.selectedTrack + 1)
+        state.selectTrack(newTrack)
+      } else if (e.code === 'ControlLeft' || e.code === 'ControlRight') {
+        e.preventDefault()
+        const state = useLooperStore.getState()
+        if (state.selectedTrack === -1) {
+          state.toggleMasterMute()
+        } else {
+          state.toggleTrackMute(state.selectedTrack)
+        }
+      } else if (e.shiftKey && e.key === 'C') {
+        e.preventDefault()
+        useLooperStore.getState().toggleCalibrationMode()
       }
     }
 

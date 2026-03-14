@@ -52,7 +52,9 @@ jobs:
       - name: Build and Deploy to Vercel
         id: deploy
         run: |
-          DEPLOY_URL=$(vercel deploy --archive=tgz --token=${{ secrets.VERCEL_TOKEN }})
+          DEPLOY_OUTPUT=$(vercel deploy --archive=tgz --token=${{ secrets.VERCEL_TOKEN }} 2>&1)
+          DEPLOY_URL=$(echo "$DEPLOY_OUTPUT" | grep -oE 'https://[^ ]+\.vercel\.app' | tail -1)
+          echo "Extracted URL: $DEPLOY_URL"
           echo "url=$DEPLOY_URL" >> $GITHUB_OUTPUT
         env:
           VERCEL_ORG_ID: team_WRsQMGKP0QsDLt8dA3Q7zmeI

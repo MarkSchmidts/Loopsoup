@@ -5,16 +5,22 @@ interface KeyboardShortcutsProps {
 }
 
 const SHORTCUTS = [
-  { key: 'Space', description: 'Toggle recording' },
+  { key: 'Space', description: 'Toggle recording (start/stop)' },
   { key: 'Enter', description: 'Undo last track' },
   { key: 'Delete', description: 'Delete selected track(s)' },
+  { key: '\u2192', description: 'Increase volume' },
+  { key: '\u2190', description: 'Decrease volume' },
+  { key: '\u2191', description: 'Select previous track' },
+  { key: '\u2193', description: 'Select next track' },
+  { key: 'Ctrl', description: 'Toggle mute on selected track' },
+  { key: 'Shift+C', description: 'Toggle calibration mode' },
   { key: '?', description: 'Show keyboard shortcuts' },
 ]
 
 export function KeyboardShortcuts({ onClose }: KeyboardShortcutsProps) {
   useEffect(() => {
     const handleKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' || e.key === '?') {
+      if (e.key === 'Escape' || e.key === '?' || (e.shiftKey && e.key === '/')) {
         e.preventDefault()
         onClose()
       }

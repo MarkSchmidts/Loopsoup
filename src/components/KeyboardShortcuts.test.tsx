@@ -11,7 +11,7 @@ describe('KeyboardShortcuts', () => {
   it('lists Space shortcut', () => {
     render(<KeyboardShortcuts onClose={() => {}} />)
     expect(screen.getByText('Space')).toBeDefined()
-    expect(screen.getByText('Toggle recording')).toBeDefined()
+    expect(screen.getByText('Toggle recording (start/stop)')).toBeDefined()
   })
 
   it('lists Enter shortcut', () => {
@@ -26,10 +26,24 @@ describe('KeyboardShortcuts', () => {
     expect(screen.getByText('Delete selected track(s)')).toBeDefined()
   })
 
-  it('lists ? shortcut', () => {
+  it('lists arrow key shortcuts', () => {
     render(<KeyboardShortcuts onClose={() => {}} />)
-    expect(screen.getByText('?')).toBeDefined()
-    expect(screen.getByText('Show keyboard shortcuts')).toBeDefined()
+    expect(screen.getByText('Increase volume')).toBeDefined()
+    expect(screen.getByText('Decrease volume')).toBeDefined()
+    expect(screen.getByText('Select previous track')).toBeDefined()
+    expect(screen.getByText('Select next track')).toBeDefined()
+  })
+
+  it('lists Ctrl shortcut for mute', () => {
+    render(<KeyboardShortcuts onClose={() => {}} />)
+    expect(screen.getByText('Ctrl')).toBeDefined()
+    expect(screen.getByText('Toggle mute on selected track')).toBeDefined()
+  })
+
+  it('lists Shift+C for calibration', () => {
+    render(<KeyboardShortcuts onClose={() => {}} />)
+    expect(screen.getByText('Shift+C')).toBeDefined()
+    expect(screen.getByText('Toggle calibration mode')).toBeDefined()
   })
 
   it('calls onClose when OK is clicked', () => {

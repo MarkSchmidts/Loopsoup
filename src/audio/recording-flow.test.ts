@@ -312,7 +312,7 @@ describe('Recording flow', () => {
       expect(capturedL).not.toBeNull()
 
       // Process through the same callback logic as App
-      const { processedL, processedR } = processRecordingCallback(
+      const { processedL } = processRecordingCallback(
         capturedL!, capturedR!, 44100, 0, 44100, 0
       )
 

@@ -1,6 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, act } from '@testing-library/react'
-import App from './App'
+import { describe, it, expect, beforeEach } from 'vitest'
 import { useLooperStore } from './store/looper-store'
 import { AudioEngine } from './audio/audio-engine'
 

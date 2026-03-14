@@ -2,6 +2,10 @@ import { test, expect } from '@playwright/test'
 
 test.describe('Loopsoup App', () => {
   test.beforeEach(async ({ page }) => {
+    // Dismiss disclaimer modal by setting localStorage before navigating
+    await page.addInitScript(() => {
+      localStorage.setItem('loopsoup_disclaimer_seen', '1')
+    })
     await page.goto('/')
   })
 
@@ -56,5 +60,31 @@ test.describe('Loopsoup App', () => {
     await expect(muteBtn).toHaveAttribute('title', 'Mute')
     await muteBtn.click()
     await expect(muteBtn).toHaveAttribute('title', 'Unmute')
+  })
+
+  test('shows disclaimer modal on first visit', async ({ page }) => {
+    // Navigate without the localStorage flag
+    const freshPage = page
+    await freshPage.addInitScript(() => {
+      localStorage.removeItem('loopsoup_disclaimer_seen')
+    })
+    await freshPage.goto('/')
+    const modal = freshPage.locator('.modal-overlay')
+    await expect(modal).toBeVisible()
+    await expect(freshPage.locator('text=Let me explain.')).toBeVisible()
+    // Dismiss it
+    await freshPage.locator('.modal-btn', { hasText: 'OK' }).click()
+    await expect(modal).not.toBeVisible()
+  })
+
+  test('shows keyboard shortcuts on ? key', async ({ page }) => {
+    await page.keyboard.press('?')
+    const modal = page.locator('.modal-overlay')
+    await expect(modal).toBeVisible()
+    await expect(page.locator('text=Keyboard Shortcuts')).toBeVisible()
+    await expect(page.locator('text=Toggle recording')).toBeVisible()
+    // Dismiss with Escape
+    await page.keyboard.press('Escape')
+    await expect(modal).not.toBeVisible()
   })
 })

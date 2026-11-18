@@ -1,0 +1,26 @@
+# Deploy über den eigenen Host (paka-deploy) statt Vercel.
+# paka-deploy-reusable.yml ist eine Kopie aus PAKA-GmbH/paka-deploy.
+name: paka-deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    types: [opened, synchronize, reopened, closed]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  actions: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  web:
+    uses: ./.github/workflows/paka-deploy-reusable.yml
+    with:
+      app: loopsoup
+      type: static
+      install: npm install --ignore-scripts
+      output: dist
+      node-version: '22'

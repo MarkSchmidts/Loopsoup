@@ -1,0 +1,291 @@
+# Cloudflare variant of the deploy pipeline for STATIC apps
+# (Workers with static assets: free, unlimited requests, served from the edge).
+# Same model as deploy.yml:
+#
+#   pull_request (opened/synchronize/reopened) -> preview  Worker <app>-pr-<N>  (workers.dev URL)
+#   pull_request closed                        -> preview Worker deleted
+#   every run                                  -> preview Workers of this app untouched for 7 days deleted
+#   push to main / workflow_dispatch           -> staging (<app>-staging), then production (<app>)
+#
+# The build runs on our own runner WITHOUT secrets; only the deploy job (GitHub-hosted)
+# gets the Cloudflare token.
+#
+# Caller needs:
+#   permissions: { contents: read, pull-requests: write }
+#   secrets: CLOUDFLARE_API_TOKEN (Workers Scripts:Edit [+ Workers Routes/DNS for custom domains]),
+#            CLOUDFLARE_ACCOUNT_ID
+name: paka-deploy-cloudflare
+
+on:
+  workflow_call:
+    inputs:
+      app:
+        type: string
+        required: true
+      working-directory:
+        type: string
+        default: .
+      node-version:
+        type: string
+        default: '22'
+      install:
+        type: string
+        default: npm ci
+      build:
+        type: string
+        default: npm run build
+      output:
+        description: Build output directory (relative to working-directory)
+        type: string
+        default: dist
+      prepare:
+        description: Shell snippet run inside the output dir after the build (e.g. write _redirects, move files)
+        type: string
+        default: ''
+      spa:
+        description: Serve index.html for unknown navigation requests
+        type: boolean
+        default: false
+      html-handling:
+        description: auto-trailing-slash | force-trailing-slash | drop-trailing-slash | none
+        type: string
+        default: auto-trailing-slash
+      domains:
+        description: Space-separated custom domains for production (empty = workers.dev only; set at cutover)
+        type: string
+        default: ''
+      redirect-hosts:
+        description: "Space-separated from=to host pairs redirected with 301 (e.g. www.loopsoup.org=loopsoup.org); also attached as custom domains in production"
+        type: string
+        default: ''
+      workers-subdomain:
+        description: Account workers.dev subdomain (for ${PAKA_DEPLOY_HOST} in .paka-deploy/*.env)
+        type: string
+        default: paka-recruiting
+      runs-on:
+        type: string
+        default: '["ubuntu-24.04"]'
+      production:
+        type: boolean
+        default: true
+    secrets:
+      CLOUDFLARE_API_TOKEN:
+        required: true
+      CLOUDFLARE_ACCOUNT_ID:
+        required: true
+    outputs:
+      url:
+        value: ${{ jobs.deploy.outputs.url }}
+
+env:
+  APP: ${{ inputs.app }}
+  WRANGLER: wrangler@4.156.2
+
+jobs:
+  build:
+    if: github.event_name != 'pull_request' || github.event.action != 'closed'
+    runs-on: ${{ fromJSON(inputs.runs-on) }}
+    strategy:
+      fail-fast: true
+      matrix:
+        kind: ${{ fromJSON(github.event_name == 'pull_request' && '["preview"]' || (inputs.production && '["staging","production"]' || '["staging"]')) }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event.pull_request.head.sha || github.sha }}
+      - uses: actions/setup-node@v4
+        with:
+          node-version: ${{ inputs.node-version }}
+      - name: Public build env
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          KIND: ${{ matrix.kind }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          SUB: ${{ inputs.workers-subdomain }}
+          DOMAINS: ${{ inputs.domains }}
+        run: |
+          set -euo pipefail
+          case "$KIND" in
+            preview) H="$APP-pr-$PR_NUMBER.$SUB.workers.dev" ;;
+            staging) H="$APP-staging.$SUB.workers.dev" ;;
+            *) H="${DOMAINS%% *}"; [ -n "$H" ] || H="$APP.$SUB.workers.dev" ;;
+          esac
+          export PAKA_DEPLOY_HOST="$H"
+          { echo "PAKA_DEPLOY=1"; echo "PAKA_DEPLOY_KIND=$KIND"; echo "PAKA_DEPLOY_HOST=$H"; } >> "$GITHUB_ENV"
+          f=".paka-deploy/$KIND.env"
+          [ -f "$f" ] || { [ "$KIND" = preview ] && f=".paka-deploy/staging.env"; }
+          [ -f "$f" ] || { echo "no $f"; exit 0; }
+          python3 - "$f" >> "$GITHUB_ENV" <<'PY'
+          import os, re, sys
+          for n, line in enumerate(open(sys.argv[1]), 1):
+              line = line.strip()
+              if not line or line.startswith("#"):
+                  continue
+              k, _, v = line.partition("=")
+              if not re.fullmatch(r"(NEXT_PUBLIC_|VITE_|PUBLIC_)[A-Z0-9_]+", k):
+                  sys.exit(f"::error::{sys.argv[1]}:{n}: nur NEXT_PUBLIC_*/VITE_*/PUBLIC_* erlaubt ({k})")
+              print(f"{k}={v.replace('${PAKA_DEPLOY_HOST}', os.environ['PAKA_DEPLOY_HOST'])}")
+          PY
+      - name: Install
+        working-directory: ${{ inputs.working-directory }}
+        run: ${{ inputs.install }}
+      - name: Build app
+        working-directory: ${{ inputs.working-directory }}
+        run: ${{ inputs.build }}
+        env:
+          NEXT_TELEMETRY_DISABLED: '1'
+      - name: Package
+        working-directory: ${{ inputs.working-directory }}
+        env:
+          KIND: ${{ matrix.kind }}
+          OUTPUT: ${{ inputs.output }}
+          PREPARE: ${{ inputs.prepare }}
+        run: |
+          set -euo pipefail
+          [ -d "$OUTPUT" ] || { echo "::error::output dir $OUTPUT fehlt"; exit 1; }
+          S="$RUNNER_TEMP/cf-site"; rm -rf "$S"; cp -a "$OUTPUT" "$S"
+          ( cd "$S" && bash -euo pipefail -c "$PREPARE" )
+          find "$S" -name '.env*' -delete
+          # Edge caching: hashed build assets are immutable. HTML is served by
+          # Cloudflare from its own asset storage with ETag revalidation.
+          {
+            [ -f "$S/_headers" ] && { cat "$S/_headers"; echo; }
+            printf '/*\n  X-Content-Type-Options: nosniff\n  Referrer-Policy: strict-origin-when-cross-origin\n'
+            [ "$KIND" != production ] && printf '  X-Robots-Tag: noindex, nofollow\n'
+            for p in /assets/* /_next/static/* /_astro/*; do
+              printf '%s\n  Cache-Control: public, max-age=31536000, immutable\n' "$p"
+            done
+          } > "$RUNNER_TEMP/_headers" && mv "$RUNNER_TEMP/_headers" "$S/_headers"
+          echo "files: $(find "$S" -type f | wc -l), size: $(du -sh "$S" | cut -f1)"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: cf-${{ inputs.app }}-${{ matrix.kind }}-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/cf-site
+          include-hidden-files: true
+          retention-days: 1
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    outputs:
+      url: ${{ steps.deploy.outputs.url }}
+    strategy:
+      max-parallel: 1
+      fail-fast: true
+      matrix:
+        kind: ${{ fromJSON(github.event_name == 'pull_request' && '["preview"]' || (inputs.production && '["staging","production"]' || '["staging"]')) }}
+    concurrency:
+      group: paka-deploy-cf-${{ inputs.app }}-${{ matrix.kind }}-${{ github.event.pull_request.number || 'main' }}
+      cancel-in-progress: ${{ matrix.kind == 'preview' }}
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: cf-${{ inputs.app }}-${{ matrix.kind }}-${{ github.run_attempt }}
+          path: site
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - name: Deploy
+        id: deploy
+        env:
+          KIND: ${{ matrix.kind }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          SPA: ${{ inputs.spa }}
+          HTML_HANDLING: ${{ inputs.html-handling }}
+          DOMAINS: ${{ inputs.domains }}
+          REDIRECTS: ${{ inputs.redirect-hosts }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          case "$KIND" in
+            preview) NAME="$APP-pr-$PR_NUMBER" ;;
+            staging) NAME="$APP-staging" ;;
+            *) NAME="$APP" ;;
+          esac
+          python3 - "$NAME" > wrangler.json <<'PY'
+          import json, os, sys
+          prod = os.environ["KIND"] == "production"
+          cfg = {
+              "name": sys.argv[1],
+              "compatibility_date": "2026-11-01",
+              "workers_dev": True,
+              "preview_urls": False,
+              "assets": {
+                  "directory": "./site",
+                  "not_found_handling": "single-page-application" if os.environ["SPA"] == "true" else "404-page",
+                  "html_handling": os.environ["HTML_HANDLING"],
+              },
+          }
+          redirects = dict(p.split("=", 1) for p in os.environ.get("REDIRECTS", "").split())
+          if redirects:
+              # tiny Worker in front of the assets: host redirects (e.g. www -> apex)
+              open("redirect.js", "w").write(
+                  "const R = " + json.dumps(redirects) + ";\n"
+                  "export default { fetch(req, env) { const u = new URL(req.url); const to = R[u.hostname];\n"
+                  "  if (to) { u.hostname = to; return Response.redirect(u.toString(), 301); }\n"
+                  "  return env.ASSETS.fetch(req); } };\n")
+              cfg["main"] = "redirect.js"
+              cfg["assets"]["binding"] = "ASSETS"
+              cfg["assets"]["run_worker_first"] = True
+          domains = os.environ.get("DOMAINS", "").split() + (list(redirects) if prod else [])
+          if prod and domains:
+              cfg["routes"] = [{"pattern": d, "custom_domain": True} for d in domains]
+          print(json.dumps(cfg, indent=2))
+          PY
+          cat wrangler.json
+          npx -y "$WRANGLER" deploy --config wrangler.json 2>&1 | tee deploy.log
+          URL=$(grep -oE 'https://[a-z0-9.-]+\.workers\.dev' deploy.log | head -1 || true)
+          [ "$KIND" = production ] && [ -n "${DOMAINS// }" ] && URL="https://${DOMAINS%% *}"
+          echo "url=$URL" >> "$GITHUB_OUTPUT"
+          echo "### $APP ($KIND): $URL" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$KIND" = preview ] && [ -n "$PR_NUMBER" ] && [ -n "$URL" ]; then
+            MARK="<!-- paka-deploy-cf:$APP -->"
+            TEXT="$MARK
+          **Preview $APP (Cloudflare):** $URL
+          _Commit ${GITHUB_SHA::8}, wird 7 Tage nach dem letzten Deploy bzw. beim Schließen des PR entfernt._"
+            CID=$(curl -sS -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments?per_page=100" \
+              | M="$MARK" python3 -c 'import json,os,sys;print(next((str(c["id"]) for c in json.load(sys.stdin) if os.environ["M"] in c["body"]),""))')
+            J=$(T="$TEXT" python3 -c 'import json,os;print(json.dumps({"body":os.environ["T"]}))')
+            if [ -n "$CID" ]; then
+              curl -sS -o /dev/null -X PATCH -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$REPO/issues/comments/$CID" -d "$J"
+            else
+              curl -sS -o /dev/null -X POST -H "Authorization: Bearer $GH_TOKEN" "https://api.github.com/repos/$REPO/issues/$PR_NUMBER/comments" -d "$J"
+            fi
+          fi
+      - name: Delete stale previews (> 7 days)
+        if: always()
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          set -euo pipefail
+          curl -sS -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts" \
+            | python3 -c '
+          import json, os, re, sys, datetime as dt
+          cut = dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=7)
+          for s in json.load(sys.stdin).get("result") or []:
+              if re.fullmatch(re.escape(os.environ["APP"]) + r"-pr-\d+", s["id"]) and \
+                 dt.datetime.fromisoformat(s["modified_on"].replace("Z", "+00:00")) < cut:
+                  print(s["id"])' | while read -r W; do
+              echo "deleting stale preview $W"
+              curl -sS -o /dev/null -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+                "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$W?force=true"
+            done
+
+  preview-remove:
+    if: github.event_name == 'pull_request' && github.event.action == 'closed'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Delete preview Worker
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+        run: |
+          curl -sS -X DELETE -H "Authorization: Bearer $CLOUDFLARE_API_TOKEN" \
+            "https://api.cloudflare.com/client/v4/accounts/$CLOUDFLARE_ACCOUNT_ID/workers/scripts/$APP-pr-$PR_NUMBER?force=true" \
+            | python3 -c 'import json,sys;d=json.load(sys.stdin);print("deleted" if d.get("success") else d.get("errors"))'

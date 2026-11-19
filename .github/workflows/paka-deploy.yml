@@ -1,12 +1,12 @@
 # Deploy auf Cloudflare Workers (Static Assets) statt Vercel.
 # paka-deploy-cloudflare.yml ist eine Kopie aus PAKA-GmbH/paka-deploy.
 #   PR      -> Preview  https://loopsoup-pr-<N>.marksworkers.workers.dev (nach 7 Tagen / beim Schließen gelöscht)
-#   master  -> Staging  https://loopsoup-staging.marksworkers.workers.dev, dann Production
+#   main    -> Staging  https://loopsoup-staging.marksworkers.workers.dev, dann Production
 name: paka-deploy
 
 on:
   push:
-    branches: [master]
+    branches: [main]
   pull_request:
     types: [opened, synchronize, reopened, closed]
   workflow_dispatch:
@@ -25,10 +25,8 @@ jobs:
       node-version: '22'
       spa: true
       workers-subdomain: marksworkers
-      # Domain erst nach Freigabe (live ist noch die alte Version):
-      # domains: loopsoup.org
-      # redirect-hosts: www.loopsoup.org=loopsoup.org
-      domains: ''
+      domains: loopsoup.org
+      redirect-hosts: www.loopsoup.org=loopsoup.org
     secrets:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CF_DEPLOY_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CF_DEPLOY_ACCOUNT_ID }}
